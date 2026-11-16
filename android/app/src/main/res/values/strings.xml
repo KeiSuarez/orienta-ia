@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Orienta IA</string>
-    <string name="title_activity_main">Orienta IA</string>
-    <string name="package_name">ar.gob.sssalud.orientaia</string>
-    <string name="custom_url_scheme">ar.gob.sssalud.orientaia</string>
-</resources>

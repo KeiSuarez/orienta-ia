@@ -1,186 +1,21 @@
 @import "tailwindcss";
 
-:root {
-  --color-navy-fondo: #0B192C;
-  --color-navy-superficie: #11223A;
-  --color-navy-borde: #1E3553;
-  --color-azul-orienta: #2B82C9;
-  --color-azul-orienta-hover: #2170B0;
-  --color-azul-niebla: #EAF3FA;
-  --color-azul-hielo: #F4F8FC;
-  --color-dorado-ia: #E5B842;
-  --color-dorado-ia-hover: #D6A62D;
-  --color-dorado-suave: #FEF9EB;
-  --color-dorado-borde: #F4D381;
-  --color-dorado-texto: #8C650A;
-  --color-canvas: #F4F7FB;
-  --color-surface: #FFFFFF;
-  --color-texto: #0F172A;
-  --color-texto-secundario: #475569;
-  --color-borde: #E2E8F0;
-  --color-borde-subtle: #EDF2F7;
-}
-
-@theme {
-  --color-navy-fondo: #0B192C;
-  --color-navy-superficie: #11223A;
-  --color-navy-borde: #1E3553;
-  --color-azul-orienta: #2B82C9;
-  --color-azul-orienta-hover: #2170B0;
-  --color-azul-niebla: #EAF3FA;
-  --color-azul-hielo: #F4F8FC;
-  --color-dorado-ia: #E5B842;
-  --color-dorado-ia-hover: #D6A62D;
-  --color-dorado-suave: #FEF9EB;
-  --color-dorado-borde: #F4D381;
-  --color-dorado-texto: #8C650A;
-  --color-canvas: #F4F7FB;
-  --color-superficie: #FFFFFF;
-  --color-texto: #0F172A;
-  --color-texto-secundario: #475569;
-  --color-borde: #E2E8F0;
-}
-
 @layer base {
-  html, body {
-    overflow-x: hidden;
-    max-width: 100vw;
-    -webkit-tap-highlight-color: transparent;
-  }
   body {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background-color: #F4F7FB;
-    color: #0F172A;
+    font-family: 'Open Sans', system-ui, -apple-system, sans-serif;
+    background-color: #F6F8FA;
+    color: #1F3A5F;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
   }
 }
 
 @media print {
-  body {
-    background-color: white !important;
-    color: black !important;
-  }
-  .no-print {
+  header, footer, nav, .no-print {
     display: none !important;
   }
   .print-only {
     display: block !important;
   }
-  .print-card {
-    border: 1px solid #cbd5e1 !important;
-    box-shadow: none !important;
-    page-break-inside: avoid;
-  }
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Animación fluida de la aguja de la brújula */
-@keyframes compass-orient {
-  0% {
-    transform: rotate(0deg);
-  }
-  20% {
-    transform: rotate(155deg);
-  }
-  45% {
-    transform: rotate(-40deg);
-  }
-  70% {
-    transform: rotate(18deg);
-  }
-  85% {
-    transform: rotate(-6deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
-}
-
-.animate-compass {
-  animation: compass-orient 1.1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-}
-
-/* Giro 360° suave al posar el ratón (hover) */
-.needle-rotate-hover {
-  transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-.group:hover .needle-rotate-hover:not(.animate-compass):not(.animate-needle-error):not(.animate-compass-search) {
-  transform: rotate(360deg);
-}
-
-/* Animación de búsqueda / calibración en pantalla de splash */
-@keyframes compass-search {
-  0% { transform: rotate(0deg); }
-  30% { transform: rotate(190deg); }
-  60% { transform: rotate(120deg); }
-  85% { transform: rotate(340deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.animate-compass-search {
-  animation: compass-search 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-/* Vibración sutil (shake) para el formulario de login en caso de error */
-@keyframes soft-shake {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-5px); }
-  40%, 80% { transform: translateX(5px); }
-}
-
-.animate-soft-shake {
-  animation: soft-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-}
-
-/* Titileo dorado y oscilación de aviso en la aguja de la 'O' */
-@keyframes needle-error-wobble {
-  0% { transform: rotate(0deg); filter: drop-shadow(0 0 0px transparent); }
-  20% { transform: rotate(-55deg); filter: drop-shadow(0 0 8px #E5B842); }
-  50% { transform: rotate(50deg); filter: drop-shadow(0 0 12px #E5B842); }
-  75% { transform: rotate(-20deg); filter: drop-shadow(0 0 6px #E5B842); }
-  100% { transform: rotate(0deg); filter: drop-shadow(0 0 0px transparent); }
-}
-
-.animate-needle-error {
-  animation: needle-error-wobble 0.95s ease-in-out forwards;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-3px) rotate(1deg);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(200%);
-  }
-}
-
-.animate-float {
-  animation: float 4s ease-in-out infinite;
-}
-
-.animate-shimmer {
-  animation: shimmer 3.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
