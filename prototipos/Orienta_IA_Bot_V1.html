@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orienta IA - Prototipo</title>
+  <style>
+:root {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #152033;
+  background: #eef3f8;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; }
+button, input { font: inherit; }
+.app-shell { max-width: 920px; margin: 0 auto; padding: 32px 18px 48px; }
+.hero { display: flex; justify-content: space-between; gap: 20px; align-items: flex-end; margin-bottom: 18px; }
+.eyebrow { letter-spacing: .12em; font-size: .76rem; font-weight: 800; margin: 0 0 6px; color: #486078; }
+h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1; }
+.subtitle { margin: 10px 0 0; color: #56697d; }
+.status { background: #fff; border: 1px solid #d5dfe9; padding: 8px 12px; border-radius: 999px; font-size: .9rem; white-space: nowrap; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #20a86b; margin-right: 6px; }
+.chat-card { background: #fff; border-radius: 20px; border: 1px solid #dce4ec; box-shadow: 0 14px 36px rgba(34, 52, 74, .09); overflow: hidden; }
+.chat { height: 480px; overflow-y: auto; padding: 22px; background: linear-gradient(#f9fbfd, #f3f7fa); }
+.message { max-width: 78%; padding: 12px 14px; border-radius: 16px; margin: 0 0 12px; line-height: 1.45; white-space: pre-line; }
+.bot { background: #fff; border: 1px solid #d9e3ec; border-top-left-radius: 5px; }
+.user { margin-left: auto; background: #1d4f7a; color: #fff; border-top-right-radius: 5px; }
+.quick-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px 4px; border-top: 1px solid #e7edf3; }
+.quick-actions button { border: 1px solid #cad7e3; background: #fff; border-radius: 999px; padding: 8px 11px; cursor: pointer; color: #24445e; }
+.quick-actions button:hover { background: #f2f7fb; }
+.composer { display: flex; gap: 10px; padding: 14px 18px 18px; }
+.composer input { flex: 1; min-width: 0; border: 1px solid #cbd7e2; border-radius: 12px; padding: 12px 13px; outline: none; }
+.composer input:focus { border-color: #577d9e; box-shadow: 0 0 0 3px rgba(87, 125, 158, .12); }
+.composer button { border: 0; border-radius: 12px; padding: 0 18px; background: #173e5f; color: #fff; font-weight: 700; cursor: pointer; }
+.note { margin-top: 14px; padding: 14px 16px; border-radius: 14px; background: #fff7df; border: 1px solid #eddc9e; color: #5b4c1d; line-height: 1.45; font-size: .92rem; }
+.checklist { margin: 8px 0 0; padding-left: 0; list-style: none; }
+.checklist li { margin: 6px 0; }
+.checklist li::before { content: "✓"; font-weight: 800; margin-right: 8px; }
+@media (max-width: 640px) {
+  .hero { align-items: flex-start; flex-direction: column; }
+  .chat { height: 56vh; }
+  .message { max-width: 90%; }
+  .composer button { padding: 0 14px; }
+}
+
+</style>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">PROTOTIPO ACADÉMICO V1</p>
+        <h1>Orienta IA</h1>
+        <p class="subtitle">Asistente de orientación de trámites de SSSalud</p>
+      </div>
+      <div class="status"><span class="dot"></span> Demo local</div>
+    </section>
+
+    <section class="chat-card">
+      <div id="chat" class="chat" aria-live="polite"></div>
+
+      <div class="quick-actions" id="quickActions">
+        <button data-example="Mi obra social no me cubre un tratamiento">Cobertura</button>
+        <button data-example="Necesito reclamar por una prestación con CUD">Discapacidad</button>
+        <button data-example="Quiero unificar aportes y soy monotributista">Unificación</button>
+        <button data-example="Quiero hacer una opción de cambio de obra social">Opción de cambio</button>
+      </div>
+
+      <form id="chatForm" class="composer">
+        <input id="messageInput" type="text" autocomplete="off" placeholder="Escribí tu consulta..." aria-label="Mensaje" />
+        <button type="submit">Enviar</button>
+      </form>
+    </section>
+
+    <section class="note">
+      <strong>Importante:</strong> esta versión demuestra la conversación, clasificación y generación de checklist con información cargada para el proyecto. La versión final prevé reemplazar la clasificación local por una API de IA real y una base de conocimientos actualizable.
+    </section>
+  </main>
+
+  <script>
+const chat = document.getElementById('chat');
+const form = document.getElementById('chatForm');
+const input = document.getElementById('messageInput');
+const quickActions = document.getElementById('quickActions');
+
+let state = {
+  intent: null,
+  employment: null,
+  waitingForEmployment: false,
+};
+
+const intents = {
+  cobertura: {
+    label: 'Cobertura prestacional - Denuncia',
+    keywords: ['no me cubre', 'no cubre', 'cobertura', 'medicamento', 'remedio', 'tratamiento', 'prestacion', 'prestación'],
+  },
+  discapacidad: {
+    label: 'Reclamo vinculado a discapacidad / CUD',
+    keywords: ['cud', 'discapacidad', 'terapia', 'terapias'],
+  },
+  unificacion: {
+    label: 'Unificación / desunificación de aportes',
+    keywords: ['unificar', 'unificacion', 'unificación', 'desunificar', 'desunificacion', 'desunificación', 'aportes', 'conyuge', 'cónyuge'],
+  },
+  opcion: {
+    label: 'Opción de cambio de obra social',
+    keywords: ['opcion de cambio', 'opción de cambio', 'cambiar obra social', 'cambio de obra social'],
+  },
+};
+
+function addMessage(text, who = 'bot') {
+  const div = document.createElement('div');
+  div.className = `message ${who}`;
+  div.textContent = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function normalize(text) {
+  return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function detectEmployment(text) {
+  const t = normalize(text);
+  if (t.includes('monotrib')) return 'Monotributo';
+  if (t.includes('relacion de dependencia') || t.includes('relación de dependencia') || t.includes('empleado') || t.includes('recibo de sueldo')) return 'Relación de dependencia';
+  if (t.includes('servicio domestico') || t.includes('servicio doméstico') || t.includes('casas particulares')) return 'Servicio doméstico';
+  if (t.includes('jubilad')) return 'Jubilado/a';
+  return null;
+}
+
+function detectIntent(text) {
+  const t = normalize(text);
+  for (const [key, data] of Object.entries(intents)) {
+    if (data.keywords.some(k => t.includes(normalize(k)))) return key;
+  }
+  return null;
+}
+
+function respondToIntent(intent, employment) {
+  if (intent === 'cobertura') {
+    if (!employment) {
+      state.waitingForEmployment = true;
+      addMessage('Entiendo que tu consulta se relaciona con cobertura prestacional. Para orientarte mejor, ¿cuál es tu situación laboral? Por ejemplo: relación de dependencia, monotributo, servicio doméstico o jubilación.');
+      return;
+    }
+
+    if (employment === 'Relación de dependencia') {
+      addMessage(
+        'Clasificación: Cobertura prestacional - Denuncia.\n\nChecklist cargado para el prototipo (relación de dependencia):\n✓ Formulario de denuncia\n✓ DNI\n✓ Prescripto médico\n✓ Síntesis de historia clínica\n✓ Último recibo de sueldo\n\nEn una versión real, estos requisitos se consultarían desde una base actualizable.'
+      );
+    } else {
+      addMessage(
+        `Clasificación: Cobertura prestacional - Denuncia.\nSituación detectada: ${employment}.\n\nEl documento base del proyecto no detalla todavía el checklist completo para esta situación laboral. El bot debe pedir o consultar la información faltante en la base de conocimientos, sin inventar requisitos.`
+      );
+    }
+    return;
+  }
+
+  if (intent === 'discapacidad') {
+    addMessage(
+      'Clasificación: Reclamo vinculado a discapacidad / CUD.\n\nRequisitos expresamente cargados en el prototipo:\n✓ Certificado Único de Discapacidad (CUD) vigente\n✓ Acreditación del vínculo familiar\n\nEl resto de la documentación deberá provenir de la base oficial que el administrador mantenga actualizada.'
+    );
+    return;
+  }
+
+  if (intent === 'unificacion') {
+    if (!employment) {
+      state.waitingForEmployment = true;
+      addMessage('Entiendo que querés realizar una unificación o desunificación de aportes. ¿Cuál es tu situación: monotributo, servicio doméstico o jubilación?');
+      return;
+    }
+
+    if (employment === 'Monotributo') {
+      addMessage(
+        'Clasificación: Unificación / desunificación de aportes.\nSituación detectada: Monotributo.\n\nInformación cargada en el prototipo:\n✓ Formularios F.184 / F.152\n✓ Certificaciones laborales requeridas\n\nLa versión final deberá recuperar el detalle actualizado desde la base de conocimientos.'
+      );
+    } else {
+      addMessage(
+        `Clasificación: Unificación / desunificación de aportes.\nSituación detectada: ${employment}.\n\nEl documento del proyecto indica que los requisitos cambian según la situación. Esta demo no agrega documentos que no estén definidos en el material base.`
+      );
+    }
+    return;
+  }
+
+  if (intent === 'opcion') {
+    addMessage(
+      'Clasificación: Opción de cambio de obra social.\n\nDatos cargados para el prototipo:\n✓ Requiere Clave Fiscal Nivel 3\n✓ Requiere confirmación vía correo electrónico\n\nLa versión final mostrará además los pasos y requisitos completos desde una fuente validada.'
+    );
+    return;
+  }
+
+  addMessage('Todavía no pude clasificar esa consulta dentro de las categorías cargadas en esta versión. Probá describiendo si se trata de cobertura, discapacidad/CUD, unificación de aportes u opción de cambio.');
+}
+
+function handleUserMessage(text) {
+  const clean = text.trim();
+  if (!clean) return;
+  addMessage(clean, 'user');
+
+  const employment = detectEmployment(clean);
+  if (employment) state.employment = employment;
+
+  if (state.waitingForEmployment && state.intent) {
+    state.waitingForEmployment = false;
+    if (!state.employment) {
+      addMessage('No pude identificar la situación laboral. Escribí, por ejemplo: “soy monotributista” o “trabajo en relación de dependencia”.');
+      state.waitingForEmployment = true;
+      return;
+    }
+    respondToIntent(state.intent, state.employment);
+    return;
+  }
+
+  const intent = detectIntent(clean);
+  if (intent) state.intent = intent;
+  respondToIntent(state.intent, state.employment);
+}
+
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const text = input.value;
+  input.value = '';
+  handleUserMessage(text);
+  input.focus();
+});
+
+quickActions.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-example]');
+  if (!btn) return;
+  handleUserMessage(btn.dataset.example);
+});
+
+addMessage('Hola, soy Orienta IA. Contame con tus palabras qué trámite o problema necesitás resolver y voy a intentar clasificarlo para orientarte.');
+
+</script>
+</body>
+</html>
