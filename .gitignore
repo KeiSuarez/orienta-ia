@@ -1,3 +1,17 @@
 node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
 .env*
 !.env.example
+
+# Archivos subidos a Google AI Studio durante el desarrollo (pueden tener datos personales)
+public/assets/aistudio/*
+!public/assets/aistudio/logo_transparent.png
+!public/assets/aistudio/image_8a2d9213.png
+!public/assets/aistudio/image_6739102f.png
+!public/assets/aistudio/consultas_simuladas_*.csv
+!public/assets/aistudio/tablero_organismo_*.json
+!public/assets/aistudio/tramites_*.json

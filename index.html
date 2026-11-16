@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orienta IA - Asistente Virtual SSSalud</title>
+    <meta name="description" content="Asistente virtual inteligente de la Superintendencia de Servicios de Salud. Orientación ciudadana sobre trámites de obras sociales, prepagas, checklists de requisitos y canales oficiales TAD y presencial." />
+    <script>
+      // En AI Studio, HMR está inactivo en el iframe de desarrollo; filtrar avisos benignos de websocket de Vite
+      (function() {
+        const _origError = console.error;
+        console.error = function(...args) {
+          if (args.length > 0 && typeof args[0] === 'string' && (args[0].includes('[vite] WebSocket') || args[0].includes('WebSocket closed without opened'))) {
+            return;
+          }
+          _origError.apply(console, args);
+        };
+      })();
+    </script>
+    <!-- PWA & Mobile Web App Meta Tags -->
+    <meta name="theme-color" content="#0B192C" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Orienta IA" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+
+    <meta property="og:title" content="Orienta IA - Asistente Virtual SSSalud" />
+    <meta property="og:description" content="Asistente virtual inteligente de la Superintendencia de Servicios de Salud. Orientación ciudadana sobre trámites de obras sociales, prepagas, checklists de requisitos y canales oficiales TAD y presencial." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#F4F7FB] text-[#0F172A] font-sans antialiased selection:bg-[#EAF3FA] selection:text-[#0B192C] min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
