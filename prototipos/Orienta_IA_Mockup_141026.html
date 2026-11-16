@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orienta IA - Mockup / Prototipo académico</title>
+<style>
+  :root{
+    --ink:#173a3c; --teal:#165b58; --teal2:#2b7a77; --sky:#55a6c7; --ice:#eef7f6;
+    --line:#d8e5e4; --muted:#6d7f80; --sand:#fff7df; --warn:#a36b10; --bg:#f5f8f7;
+    --navy:#25465f; --white:#fff; --ok:#2c7a5c; --danger:#a84c4c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:#213536}
+  button,input,select,textarea{font:inherit}
+  .prototype-note{background:#18313c;color:#fff;padding:8px 24px;font-size:13px;letter-spacing:.2px;display:flex;justify-content:space-between;gap:20px}
+  .prototype-note b{color:#9fe3dc}
+  header{background:#fff;border-bottom:1px solid var(--line);box-shadow:0 1px 10px rgba(16,63,62,.05)}
+  .brandbar{max-width:1320px;margin:auto;padding:18px 28px 8px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+  .brand{display:flex;align-items:center;gap:14px}.logo{width:56px;height:56px;border-radius:16px;background:linear-gradient(145deg,#dff1fa,#7fc1db);display:grid;place-items:center;border:1px solid #c7e0ea;box-shadow:0 4px 10px rgba(41,110,137,.15);font-size:30px}
+  .gov{font-size:12px;letter-spacing:.7px;color:var(--muted);font-weight:700}.title{font-size:29px;font-weight:800;color:#16484a}.title span{color:#3b8aa7}.tag{display:inline-block;margin-left:8px;background:#e9f4f0;border:1px solid #cfe3dc;padding:4px 9px;border-radius:999px;font-size:12px;color:#406961;font-weight:700}
+  .nav{max-width:1320px;margin:auto;padding:0 28px 14px;display:flex;gap:10px;flex-wrap:wrap}.nav button{border:1px solid transparent;background:transparent;color:#315d5d;font-weight:700;padding:11px 16px;border-radius:10px;cursor:pointer}.nav button.active{background:var(--teal);color:white}.nav button:hover{background:#edf5f3}
+  main{max-width:1320px;margin:18px auto 60px;padding:0 28px}
+  .panel{display:none}.panel.active{display:block}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 4px 16px rgba(27,75,75,.06)}
+  .intro{padding:18px 20px;margin-bottom:14px}.intro h2{margin:0 0 5px;font-size:20px;color:var(--teal)}.intro p{margin:0;color:#617879;line-height:1.45}.pill{display:inline-block;padding:4px 9px;border-radius:999px;background:#eaf4f1;color:#4c716b;font-weight:700;font-size:12px;margin-left:6px}
+  .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}.mini{background:#f1f7f5;border:1px solid #dce9e5;border-radius:12px;padding:14px}.mini h4{margin:0 0 8px;color:#315f5c}.mini ul{margin:0;padding-left:18px;color:#5c7070;line-height:1.45;font-size:14px}
+  .casebar{margin:14px 0;padding:15px 18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end}.field label{display:block;font-size:12px;font-weight:800;color:#526b6b;margin-bottom:5px}.field select,.field input,.field textarea{width:100%;padding:10px 11px;border:1px solid #cfe0dd;border-radius:10px;background:#f9fbfa;color:#294849}.status{background:var(--sand);border:1px solid #f0dca2;border-radius:10px;padding:10px 12px;color:var(--warn);font-weight:800;font-size:13px}
+  .chatwrap{display:grid;grid-template-columns:1.65fr .75fr;gap:14px}.chat{min-height:440px;display:flex;flex-direction:column;overflow:hidden}.chathead{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.assistant-name{font-weight:800;color:#245754}.assistant-name small{display:block;color:#7b8e8e;font-weight:500;margin-top:2px}.chatbody{padding:18px;flex:1;background:linear-gradient(#fff,#fbfdfd);overflow:auto;max-height:420px}.msg{max-width:82%;padding:11px 13px;border-radius:13px;margin:7px 0;line-height:1.4;font-size:14px}.bot{background:#eef6f4;border:1px solid #d6e9e4;color:#244e4c}.user{background:#dfeef6;border:1px solid #c6dfeb;color:#244a5b;margin-left:auto}.msg b{color:#154f4d}.composer{display:flex;gap:9px;padding:12px;border-top:1px solid var(--line);background:#fff}.composer input{flex:1;padding:12px;border:1px solid #cfdedc;border-radius:12px}.btn{border:0;border-radius:10px;padding:10px 14px;background:var(--teal);color:#fff;font-weight:800;cursor:pointer}.btn.secondary{background:#fff;color:var(--teal);border:1px solid #9fc8c1}.btn.light{background:#eaf5f3;color:#28605b}.btn.danger{background:#fff1f1;color:#8f4545;border:1px solid #efcaca}.quick{padding:16px}.quick h3{margin:0 0 10px;color:#2d5655}.quick button{display:block;width:100%;text-align:left;margin:7px 0;padding:10px 11px;border-radius:10px;border:1px solid #d7e4e2;background:#fff;color:#395b5b;cursor:pointer}.quick button:hover{background:#eff7f5}
+  .section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 0 12px}.section-title h2{margin:0;color:var(--teal)}.section-title p{margin:3px 0 0;color:var(--muted)}
+  .check-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:14px}.config{padding:18px}.config .field{margin-bottom:12px}.result{padding:18px}.result-top{display:flex;justify-content:space-between;gap:15px;align-items:start;border-bottom:1px solid var(--line);padding-bottom:12px}.identified{font-weight:800;color:#255957;font-size:18px}.mode{font-size:12px;padding:6px 9px;border-radius:999px;background:#eef6f4;color:#42706c;font-weight:800}.checklist{list-style:none;padding:0;margin:14px 0}.checklist li{padding:10px 0;border-bottom:1px dashed #d8e3e1;display:flex;gap:10px;align-items:flex-start}.box{width:20px;height:20px;border:2px solid #77aaa3;border-radius:5px;display:inline-block;flex:none;margin-top:1px}.hint{font-size:13px;color:#647a79;background:#f3f8f7;border-radius:10px;padding:10px 12px;margin-top:10px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .channel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.channel{padding:20px}.channel h3{margin:0 0 8px;color:#275a58}.channel p{color:#667d7c;line-height:1.45}.channel .bigicon{font-size:34px;margin-bottom:8px}
+  .admin-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.admin-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}.tablecard{padding:14px;overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:11px 10px;border-bottom:1px solid #e2ebea;text-align:left;font-size:14px}th{color:#4b6766;background:#f4f8f7}.badge{font-size:12px;background:#eaf6ee;color:#3b7452;padding:4px 7px;border-radius:999px;font-weight:800}.formcard{padding:18px}.formcard h3{margin-top:0;color:#285a58}.req-editor{display:flex;gap:7px;margin-top:8px}.req-editor input{flex:1;padding:9px;border:1px solid #cfe0dd;border-radius:8px}.req-list{margin:10px 0;padding-left:18px;color:#526968}
+  .trace{margin-top:14px;background:#16343a;color:#e8f3f2;border-radius:14px;padding:15px 18px;font-size:13px;line-height:1.5}.trace b{color:#96e3d6}.footer-note{margin-top:18px;color:#7b8b8b;font-size:12px;text-align:center}
+  @media(max-width:900px){.info-grid,.casebar,.channel-grid,.admin-grid,.check-grid,.chatwrap{grid-template-columns:1fr}.brandbar{align-items:flex-start}.title{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="prototype-note"><span><b>PROTOTIPO ACADÉMICO</b> - Desarrollo de Sistemas de Inteligencia Artificial</span><span>No es un canal oficial de SSSalud</span></div>
+<header>
+  <div class="brandbar">
+    <div class="brand"><div class="logo">🧭</div><div><div class="gov">PROYECTO ACADÉMICO · ORIENTACIÓN DE TRÁMITES DE SALUD</div><div class="title">Orienta <span>IA</span><span class="tag">Asistente de orientación</span></div></div></div>
+    <div class="pill">Mockup V2 · 8 historias reflejadas</div>
+  </div>
+  <div class="nav">
+    <button class="active" data-panel="assistant">◉ Asistente Ciudadano</button>
+    <button data-panel="check">☑ Checklist Requisitos</button>
+    <button data-panel="channels">↗ Canales de Atención</button>
+    <button data-panel="admin">⚙ Administración</button>
+  </div>
+</header>
+<main>
+  <section id="assistant" class="panel active">
+    <div class="card intro">
+      <h2>¿Cómo te acompañamos? <span class="pill">Orientación y acompañamiento</span></h2>
+      <p>Contanos tu situación con tus propias palabras. Orienta IA interpreta la consulta, pide solo los datos que faltan y prepara una guía con requisitos validados para iniciar el trámite por el canal correspondiente.</p>
+      <div class="info-grid">
+        <div class="mini"><h4>En qué ayuda Orienta</h4><ul><li>Entiende lenguaje cotidiano.</li><li>Identifica el tipo de trámite o reclamo.</li><li>Prepara un checklist personalizado.</li></ul></div>
+        <div class="mini"><h4>Para cuidar tu gestión</h4><ul><li>No solicita contraseñas.</li><li>No inventa requisitos.</li><li>Usa información administrable y validada.</li></ul></div>
+        <div class="mini"><h4>Siguiente paso</h4><ul><li>Reunir documentación.</li><li>Consultar modalidad y canal.</li><li>Iniciar el trámite por vía oficial.</li></ul></div>
+      </div>
+    </div>
+    <div class="card casebar">
+      <div class="field"><label>TRÁMITE IDENTIFICADO</label><select id="caseTramite"><option>Pendiente...</option><option>Cobertura prestacional</option><option>Discapacidad / CUD</option><option>Unificación de aportes</option><option>Opción de cambio</option></select></div>
+      <div class="field"><label>CONDICIÓN LABORAL</label><select id="caseCond"><option>Pendiente...</option><option>Relación de dependencia</option><option>Monotributo</option><option>Servicio doméstico</option><option>Jubilado/a</option></select></div>
+      <div class="status" id="caseStatus">◌ Relevando información del caso</div>
+    </div>
+    <div class="chatwrap">
+      <div class="card chat">
+        <div class="chathead"><div class="assistant-name">Orienta · Atención Ciudadana<small>Asistente de orientación · Prototipo</small></div><button class="btn secondary" onclick="resetChat()">Nueva consulta</button></div>
+        <div id="chatbody" class="chatbody">
+          <div class="msg bot">Hola. Contame <b>qué necesitás resolver</b> y voy a ayudarte a identificar el trámite y los requisitos.</div>
+        </div>
+        <div class="composer"><input id="message" placeholder="Ej.: Mi obra social no me cubre un medicamento..." onkeydown="if(event.key==='Enter')sendMsg()"/><button class="btn" onclick="sendMsg()">Enviar</button></div>
+      </div>
+      <div class="card quick">
+        <h3>Ejemplos para probar</h3>
+        <button onclick="sample('Mi obra social no me cubre los medicamentos y soy monotributista')">Cobertura + Monotributo</button>
+        <button onclick="sample('Necesito reclamar terapias para mi hijo que tiene CUD')">Discapacidad / CUD</button>
+        <button onclick="sample('Quiero unificar aportes con mi cónyuge')">Unificación de aportes</button>
+        <button onclick="sample('Quiero saber cómo hago una opción de cambio y si es online')">Opción de cambio</button>
+        <div class="trace"><b>Qué demuestra esta pantalla:</b><br>HU1 - consulta en lenguaje natural y clasificación. También inicia HU2, HU3, HU4 y HU8 según el caso.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="check" class="panel">
+    <div class="section-title"><div><h2>Checklist personalizado</h2><p>El resultado cambia según el trámite y la situación del ciudadano.</p></div><span class="pill">HU2 · HU3 · HU4 · HU5 · HU8</span></div>
+    <div class="check-grid">
+      <div class="card config">
+        <div class="field"><label>TRÁMITE</label><select id="chkTramite" onchange="renderChecklist()"><option>Cobertura prestacional</option><option>Discapacidad / CUD</option><option>Unificación de aportes</option><option>Opción de cambio</option></select></div>
+        <div class="field"><label>CONDICIÓN LABORAL</label><select id="chkCond" onchange="renderChecklist()"><option>Relación de dependencia</option><option>Monotributo</option><option>Servicio doméstico</option><option>Jubilado/a</option></select></div>
+        <div class="field"><label>¿POSEE CUD?</label><select id="chkCud" onchange="renderChecklist()"><option>No</option><option>Sí</option></select></div>
+        <div class="hint">Los documentos son parte del prototipo académico y deben mantenerse desde el panel administrador con información validada.</div>
+      </div>
+      <div class="card result">
+        <div class="result-top"><div><div class="identified" id="identified">Trámite identificado</div><div id="summary" style="color:#6c7f7e;margin-top:5px"></div></div><span class="mode" id="mode">Modalidad</span></div>
+        <ul id="checklist" class="checklist"></ul>
+        <div class="actions"><button class="btn" onclick="window.print()">Descargar / Imprimir PDF</button><button class="btn light" onclick="showPanel('channels')">Ver canal de atención</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="channels" class="panel">
+    <div class="section-title"><div><h2>Canales y modalidad del trámite</h2><p>El sistema diferencia orientación, preparación de requisitos e inicio oficial de la gestión.</p></div><span class="pill">HU8</span></div>
+    <div class="channel-grid">
+      <div class="card channel"><div class="bigicon">💻</div><h3>Online / TAD</h3><p>Cuando el trámite admite gestión digital, Orienta IA informa la modalidad y los datos de acceso necesarios definidos para ese trámite.</p><button class="btn secondary">Ver instrucciones</button></div>
+      <div class="card channel"><div class="bigicon">🏢</div><h3>Presencial</h3><p>Si requiere atención presencial, el sistema informa que debe consultarse turno, sede y documentación antes de concurrir.</p><button class="btn secondary">Ver pasos</button></div>
+      <div class="card channel"><div class="bigicon">☑</div><h3>Antes de iniciar</h3><p>El checklist permite verificar que la documentación esté reunida antes de comenzar el trámite por el canal oficial.</p><button class="btn secondary" onclick="showPanel('check')">Abrir checklist</button></div>
+    </div>
+    <div class="trace"><b>Decisión de diseño:</b> Orienta IA orienta y prepara. El inicio formal del trámite se realiza por el canal oficial correspondiente.</div>
+  </section>
+
+  <section id="admin" class="panel">
+    <div class="admin-head"><div><h2 style="margin:0;color:var(--teal)">Panel del Administrador de Contenidos</h2><p style="margin:4px 0 0;color:var(--muted)">Mantiene trámites y requisitos actualizados.</p></div><button class="btn" onclick="newTramite()">+ Nuevo trámite / categoría</button></div>
+    <div class="admin-grid">
+      <div class="card tablecard"><table><thead><tr><th>Trámite</th><th>Modalidad</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="adminRows"></tbody></table></div>
+      <div class="card formcard">
+        <h3 id="editTitle">Editar trámite</h3>
+        <div class="field"><label>NOMBRE</label><input id="adminName" value="Cobertura prestacional"/></div>
+        <div class="field"><label>MODALIDAD</label><select id="adminMode"><option>Online / TAD</option><option>Presencial</option><option>Mixto</option></select></div>
+        <div class="field"><label>REQUISITOS</label><div class="req-editor"><input id="newReq" placeholder="Agregar requisito..."/><button class="btn light" onclick="addReq()">Agregar</button></div><ul id="reqList" class="req-list"></ul></div>
+        <div class="actions"><button class="btn" onclick="saveAdmin()">Guardar cambios</button><button class="btn secondary" onclick="loadAdmin(0)">Cancelar</button></div>
+        <div class="trace"><b>Qué demuestra esta pantalla:</b><br>HU6 - actualizar requisitos por normativa.<br>HU7 - alta de nuevas categorías de reclamos o trámites.</div>
+      </div>
+    </div>
+  </section>
+  <div class="footer-note">Orienta IA · Prototipo académico para la materia Desarrollo de Sistemas de Inteligencia Artificial</div>
+</main>
+<script>
+const navBtns=[...document.querySelectorAll('.nav button')];
+navBtns.forEach(b=>b.addEventListener('click',()=>showPanel(b.dataset.panel)));
+function showPanel(id){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');navBtns.forEach(b=>b.classList.toggle('active',b.dataset.panel===id));window.scrollTo({top:0,behavior:'smooth'});}
+function addMessage(text,who='bot'){const d=document.createElement('div');d.className='msg '+who;d.innerHTML=text;const body=document.getElementById('chatbody');body.appendChild(d);body.scrollTop=body.scrollHeight;}
+function sample(t){document.getElementById('message').value=t;sendMsg();}
+function resetChat(){document.getElementById('chatbody').innerHTML='<div class="msg bot">Hola. Contame <b>qué necesitás resolver</b> y voy a ayudarte a identificar el trámite y los requisitos.</div>';document.getElementById('caseTramite').selectedIndex=0;document.getElementById('caseCond').selectedIndex=0;document.getElementById('caseStatus').textContent='◌ Relevando información del caso';}
+function sendMsg(){const inp=document.getElementById('message');const t=inp.value.trim();if(!t)return;addMessage(t,'user');inp.value='';const s=t.toLowerCase();let tram='';let cond='';let reply='';
+ if(s.includes('cud')||s.includes('discap')){tram='Discapacidad / CUD';reply='Entiendo. El caso involucra una prestación vinculada a <b>discapacidad/CUD</b>. Voy a necesitar confirmar que el CUD esté vigente y el vínculo cuando corresponda.';}
+ else if(s.includes('unific')||s.includes('aporte')){tram='Unificación de aportes';reply='Identifiqué una consulta sobre <b>unificación/desunificación de aportes</b>. Para darte los requisitos correctos necesito conocer la situación laboral.';}
+ else if(s.includes('opción')||s.includes('opcion')||s.includes('cambio')){tram='Opción de cambio';reply='Parece una consulta sobre <b>opción de cambio</b>. El sistema te mostrará requisitos y la modalidad/canal disponible para iniciar la gestión.';}
+ else if(s.includes('cubr')||s.includes('medic')||s.includes('tratamiento')||s.includes('obra social')){tram='Cobertura prestacional';reply='Identifiqué un posible caso de <b>cobertura prestacional</b>. Para personalizar la guía necesito confirmar tu condición laboral.';}
+ else{reply='Todavía no puedo clasificar el caso con seguridad. ¿Podés indicarme si se trata de <b>cobertura, discapacidad/CUD, unificación de aportes u opción de cambio</b>?';}
+ if(s.includes('monotrib'))cond='Monotributo';else if(s.includes('dependencia'))cond='Relación de dependencia';else if(s.includes('domést')||s.includes('domest'))cond='Servicio doméstico';else if(s.includes('jubil'))cond='Jubilado/a';
+ if(tram){[...document.getElementById('caseTramite').options].forEach((o,i)=>{if(o.text===tram)document.getElementById('caseTramite').selectedIndex=i});document.getElementById('caseStatus').textContent='✓ Caso clasificado - faltan datos mínimos';}
+ if(cond){[...document.getElementById('caseCond').options].forEach((o,i)=>{if(o.text===cond)document.getElementById('caseCond').selectedIndex=i});reply+=' Detecté además la condición <b>'+cond+'</b>.';}
+ setTimeout(()=>addMessage(reply),220);
+ if(tram)setTimeout(()=>addMessage('Cuando confirmemos los datos mínimos, puedo generar el <b>checklist de documentación</b> y mostrarte el canal de atención.'),430);
+}
+const data={
+ 'Cobertura prestacional':{mode:'Online o presencial según el caso',base:['Formulario de denuncia','DNI','Prescripción médica','Síntesis de historia clínica'],byCond:{'Relación de dependencia':['Último recibo de sueldo'],'Monotributo':['Constancia de monotributo'],'Servicio doméstico':['Constancia laboral / aportes'],'Jubilado/a':['Constancia de beneficio']},cud:['CUD vigente','Acreditación de vínculo, cuando corresponda']},
+ 'Discapacidad / CUD':{mode:'Según prestación y canal habilitado',base:['DNI','CUD vigente','Prescripción médica / indicación profesional','Documentación clínica'],byCond:{'Relación de dependencia':['Último recibo de sueldo'],'Monotributo':['Constancia de monotributo'],'Servicio doméstico':['Constancia laboral / aportes'],'Jubilado/a':['Constancia de beneficio']},cud:['Acreditación de vínculo familiar, cuando corresponda']},
+ 'Unificación de aportes':{mode:'Administrativo - verificar canal vigente',base:['DNI','Documentación del vínculo'],byCond:{'Relación de dependencia':['Certificación / recibo laboral correspondiente'],'Monotributo':['Formularios y constancias de monotributo correspondientes'],'Servicio doméstico':['Constancias de aportes del régimen'],'Jubilado/a':['Constancia de beneficio']},cud:[]},
+ 'Opción de cambio':{mode:'Online - verificar requisitos de acceso vigentes',base:['DNI','Datos de afiliación / cobertura actual','Correo electrónico de contacto'],byCond:{'Relación de dependencia':['Datos laborales básicos'],'Monotributo':['Constancia de situación tributaria'],'Servicio doméstico':['Constancia laboral / aportes'],'Jubilado/a':['Constancia de beneficio']},cud:[]}
+};
+function renderChecklist(){const t=document.getElementById('chkTramite').value,c=document.getElementById('chkCond').value,cud=document.getElementById('chkCud').value==='Sí',d=data[t];document.getElementById('identified').textContent=t;document.getElementById('summary').textContent='Condición: '+c+(cud?' · Con CUD':'');document.getElementById('mode').textContent=d.mode;let arr=[...d.base,...(d.byCond[c]||[])];if(cud)arr=[...arr,...d.cud];document.getElementById('checklist').innerHTML=arr.map(x=>'<li><span class="box"></span><span>'+x+'</span></li>').join('');}
+const tramites=[
+ {name:'Cobertura prestacional',mode:'Mixto',req:['Formulario de denuncia','DNI','Prescripción médica','Síntesis de historia clínica']},
+ {name:'Discapacidad / CUD',mode:'Mixto',req:['DNI','CUD vigente','Prescripción médica / indicación profesional']},
+ {name:'Unificación de aportes',mode:'Administrativo',req:['DNI','Documentación del vínculo','Constancias según condición']},
+ {name:'Opción de cambio',mode:'Online',req:['DNI','Datos de afiliación','Correo electrónico']}
+];
+let currentAdmin=0;function renderAdmin(){document.getElementById('adminRows').innerHTML=tramites.map((t,i)=>`<tr><td><b>${t.name}</b></td><td>${t.mode}</td><td><span class="badge">Activo</span></td><td><button class="btn secondary" onclick="loadAdmin(${i})">Editar</button></td></tr>`).join('');}
+function loadAdmin(i){currentAdmin=i;const t=tramites[i];document.getElementById('editTitle').textContent='Editar trámite';document.getElementById('adminName').value=t.name;document.getElementById('adminMode').value=['Online / TAD','Presencial','Mixto'].includes(t.mode)?t.mode:'Mixto';renderReqs(t.req);}
+function renderReqs(arr){document.getElementById('reqList').innerHTML=arr.map((r,i)=>`<li>${r} <button onclick="removeReq(${i})" style="border:0;background:transparent;color:#a84c4c;cursor:pointer">×</button></li>`).join('');}
+function addReq(){const v=document.getElementById('newReq').value.trim();if(!v)return;tramites[currentAdmin].req.push(v);document.getElementById('newReq').value='';renderReqs(tramites[currentAdmin].req);}
+function removeReq(i){tramites[currentAdmin].req.splice(i,1);renderReqs(tramites[currentAdmin].req);}
+function saveAdmin(){tramites[currentAdmin].name=document.getElementById('adminName').value.trim()||'Sin nombre';tramites[currentAdmin].mode=document.getElementById('adminMode').value;renderAdmin();alert('Cambios guardados en el prototipo.');}
+function newTramite(){tramites.push({name:'Nueva categoría',mode:'Mixto',req:[]});currentAdmin=tramites.length-1;renderAdmin();loadAdmin(currentAdmin);document.getElementById('editTitle').textContent='Crear nueva categoría / trámite';}
+renderChecklist();renderAdmin();loadAdmin(0);
+</script>
+</body></html>
