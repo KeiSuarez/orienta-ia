@@ -2,7 +2,7 @@
 
 Asistente web que orienta a las personas sobre trámites de obras sociales y empresas de medicina prepaga ante la **Superintendencia de Servicios de Salud (SSSalud)** de Argentina. A partir de una descripción en lenguaje natural, identifica el trámite que corresponde, solicita los datos mínimos del caso y genera un **checklist de documentación** con los canales oficiales de presentación.
 
-Trabajo práctico de la materia *Aproximación al Campo Laboral* · Tecnicatura Superior en Ciencia de Datos e Inteligencia Artificial · IFTS N.º 12.
+Trabajo práctico integrador de la materia *Desarrollo de Sistemas de Inteligencia Artificial* · Tecnicatura Superior en Ciencia de Datos e Inteligencia Artificial · IFTS N.º 12.
 
 > **Aviso:** proyecto académico. No es un servicio oficial de la SSSalud, no recibe reclamos y no almacena datos personales. La información de trámites debe contrastarse con [argentina.gob.ar/sssalud](https://www.argentina.gob.ar/sssalud).
 
@@ -10,18 +10,23 @@ Trabajo práctico de la materia *Aproximación al Campo Laboral* · Tecnicatura 
 
 ## Contenido
 1. [Funcionalidades](#funcionalidades)
-2. [Stack tecnológico](#stack-tecnológico)
-3. [Arquitectura](#arquitectura)
-4. [Estructura del repositorio](#estructura-del-repositorio)
-5. [Modelo de dominio](#modelo-de-dominio)
-6. [Motor de conversación](#motor-de-conversación)
-7. [Datos](#datos)
-8. [API del servidor](#api-del-servidor)
-9. [Privacidad y seguridad](#privacidad-y-seguridad)
-10. [Instalación y ejecución](#instalación-y-ejecución)
-11. [Limitaciones y trabajo futuro](#limitaciones-y-trabajo-futuro)
-12. [Diagramas UML](#diagramas-uml)
-13. [Autores](#autores)
+2. [Historias de usuario](#historias-de-usuario)
+3. [Funcionalidad de IA](#funcionalidad-de-ia)
+4. [Stack tecnológico](#stack-tecnológico)
+5. [Arquitectura](#arquitectura)
+6. [Estructura del repositorio](#estructura-del-repositorio)
+7. [Modelo de dominio](#modelo-de-dominio)
+8. [Motor de conversación](#motor-de-conversación)
+9. [Datos](#datos)
+10. [API del servidor](#api-del-servidor)
+11. [Privacidad y seguridad](#privacidad-y-seguridad)
+12. [Instalación y ejecución](#instalación-y-ejecución)
+13. [Pruebas](#pruebas)
+14. [Uso de IA en el desarrollo](#uso-de-ia-en-el-desarrollo)
+15. [Historial del repositorio](#historial-del-repositorio)
+16. [Limitaciones y trabajo futuro](#limitaciones-y-trabajo-futuro)
+17. [Diagramas UML](#diagramas-uml)
+18. [Autores](#autores)
 
 ---
 
@@ -40,6 +45,40 @@ La aplicación tiene dos perfiles.
 - **Panel del organismo:** métricas agregadas de consultas con filtros por mes, provincia, tipo de entidad y trámite, aplicando k-anonimato.
 - **Consultas:** registro anónimo de las consultas reales, exportable a CSV.
 - **Gestión de trámites:** alta de trámites y edición de requisitos y canales; exporta un nuevo `tramites.json`.
+
+---
+
+## Historias de usuario
+
+Cada funcionalidad responde a una historia de usuario. La HU 9 es la funcionalidad de inteligencia artificial.
+
+| HU | Historia | Funcionalidad | Código principal |
+|---|---|---|---|
+| 1 | Describir el problema en lenguaje cotidiano y que el asistente identifique el trámite | Asistente (motor de reglas) | `ChatInterface.tsx`, `orientaEngine.ts`, `decisionEngine.ts` |
+| 2 | Requisitos para denuncia por cobertura prestacional | Asistente y Mi checklist | `tramites.json`, `ChecklistView.tsx` |
+| 3 | Requisitos para reclamos de discapacidad con CUD | Asistente y Mi checklist | `tramites.json`, `ChecklistView.tsx` |
+| 4 | Requisitos para unificar o desunificar aportes | Asistente y Mi checklist | `tramites.json`, `ChecklistView.tsx` |
+| 5 | Checklist para imprimir o guardar en PDF | Mi checklist | `ChecklistView.tsx`, `modelo/Checklist.ts` |
+| 6 | Actualizar los requisitos de un trámite | Gestión de trámites | `admin/GestionTramites.tsx` |
+| 7 | Dar de alta un trámite nuevo | Gestión de trámites | `admin/GestionTramites.tsx` |
+| 8 | Saber si el trámite es online o requiere Clave Fiscal o turno | Mi checklist y Canales de contacto | `ChecklistView.tsx`, `CanalesModal.tsx` |
+| **9** | **Revisar una receta u orden médica con IA antes de presentarla** | **Herramientas IA (Gemini)** | **`AiToolsModal.tsx`, `server.ts` (`/api/ai/audit-document`)** |
+| 10 | Generar la nota del reclamo | Redactor de nota | `ciudadano/RedactorNota.tsx` |
+| 11 | Ver estadísticas anónimas y descargarlas en CSV | Panel del organismo y Consultas | `admin/PanelOrganismo.tsx`, `admin/ConsultasRegistradas.tsx` |
+
+---
+
+## Funcionalidad de IA
+
+**Revisar receta (HU 9)** usa la API de Google Gemini para revisar una receta u orden médica antes de presentarla.
+
+1. El ciudadano sube una imagen y, si quiere, un texto en *Herramientas IA* (`AiToolsModal.tsx`).
+2. El navegador la envía a `POST /api/ai/audit-document`. La API key nunca llega al navegador.
+3. El servidor enmascara datos personales del texto y llama a Gemini con una instrucción de sistema que le pide no transcribir datos personales, `temperature: 0.2` y una respuesta en JSON con esquema fijo.
+4. Gemini devuelve `tipoDocumento`, `estado`, `observacionesPositivas`, `elementosFaltantes` y `recomendacionCiudadana`, que la pantalla muestra.
+5. Si Gemini responde `503` o `429`, el servidor reintenta y, si está configurado, usa `GEMINI_MODEL_RESPALDO`. Si sigue sin responder, aplica una revisión por palabras clave (cuando hay texto) o muestra un mensaje claro, sin que la app se rompa.
+
+En el planteo inicial, Gemini también clasificaba las consultas del chat. Durante las pruebas dio errores `503` (alta demanda) y `404` (modelo no disponible), por lo que el chat pasó a un motor de reglas y Gemini quedó dedicado a la revisión de recetas.
 
 ---
 
@@ -371,7 +410,7 @@ Copiar `.env.example` a `.env` y completar:
 | Variable | Obligatoria | Descripción |
 |---|---|---|
 | `ADMIN_PASSWORD` | Sí | Contraseña del administrador. Sin ella, el acceso de administrador queda deshabilitado. |
-| `GEMINI_API_KEY` | No | API key de Gemini para la revisión de documentos. |
+| `GEMINI_API_KEY` | Para la IA | API key de Gemini. Sin ella la app funciona, pero no la revisión de recetas (HU 9). |
 | `GEMINI_MODEL` | No | Modelo principal (por defecto `gemini-3.8-flash`). |
 | `GEMINI_MODEL_RESPALDO` | No | Modelo alternativo si el principal responde `503`/`429`. |
 | `PORT` | No | Puerto del servidor (por defecto `3000`). |
@@ -387,6 +426,34 @@ NODE_ENV=production npm start   # servir la versión compilada
 
 En **Google AI Studio**, las variables se cargan en *Settings → Secrets*.
 
+> Nunca subas el archivo `.env` con la clave real: el `.gitignore` ya lo excluye.
+
+---
+
+## Pruebas
+
+Cada versión se probó en la vista previa de Google AI Studio: pruebas funcionales manuales, exploratorias y de regresión, pruebas end-to-end con Playwright contra un servidor de prueba y validación del contenido por una integrante que trabaja en la SSSalud. El plan, los casos de la funcionalidad de IA, los casos límite y el registro de los 10 bugs corregidos están en el informe de entrega. `npm run lint` verifica los tipos de TypeScript.
+
+---
+
+## Uso de IA en el desarrollo
+
+| Parte | Herramienta | Qué revisó o ajustó el equipo |
+|---|---|---|
+| Historias de usuario y criterios Gherkin | ChatGPT / Gemini | Alcance y tipos de usuario reales |
+| Prototipo HTML y mockup (`prototipos/`) | ChatGPT | Pantallas y flujo, base del diseño final |
+| Aplicación web | Google AI Studio | Cada versión se probó y se pidieron cambios |
+| Base de trámites, clases de `src/modelo`, unificación de versiones, login seguro, filtro de privacidad, reintentos de Gemini y README | Claude | Requisitos validados contra fuentes de la SSSalud; cada cambio se probó en AI Studio |
+| Diagramas UML y pruebas end-to-end | Claude | Diagramas alineados con el código; resultados confirmados a mano |
+
+La mayor parte del código se generó con asistencia de IA. El equipo definió qué construir, aportó el conocimiento de la SSSalud, probó cada versión y decidió qué cambiar.
+
+---
+
+## Historial del repositorio
+
+El historial se armó subiendo en orden las versiones guardadas del proyecto, de la más antigua a la más reciente. La fecha original de cada versión figura en el mensaje de su commit. Los dos primeros prototipos en HTML se conservan en `prototipos/`.
+
 ---
 
 ## Limitaciones y trabajo futuro
@@ -400,10 +467,10 @@ En **Google AI Studio**, las variables se cargan en *Settings → Secrets*.
 **Trabajo futuro**
 - Migrar `tramites.json` y el registro de consultas a una base de datos (por ejemplo PostgreSQL o Firestore).
 - Incorporar un clasificador entrenado con las consultas registradas para complementar las reglas, manteniendo la base como única fuente de requisitos.
-- Validar la base de conocimiento con personal de la SSSalud y completar los códigos de trámite TAD.
+- Completar los códigos de trámite TAD que figuran "a confirmar". La base ya fue revisada por una integrante que trabaja en la SSSalud (05/11/2026).
 - Agregar pruebas automatizadas del motor de reglas.
 
-> El repositorio conserva configuraciones del prototipo original para empaquetado de escritorio y Android (`electron/`, `android/`, `capacitor.config.ts`) que no forman parte de esta versión.
+> El repositorio conserva archivos heredados del prototipo original que no forman parte de esta versión: empaquetado de escritorio y Android (`electron/`, `electron-builder.json`, `android/`, `capacitor.config.ts`, `scripts/generate_installers.py`), e instalación como PWA (`src/components/PWAInstallButton.tsx`, `dev-dist/`).
 
 ---
 
