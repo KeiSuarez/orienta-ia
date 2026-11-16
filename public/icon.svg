@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#142844" />
+      <stop offset="100%" stop-color="#0B192C" />
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGlow)" />
+
+  <g filter="url(#shadow)" transform="translate(8, 0)">
+    <!-- White outer orbital arc -->
+    <path
+      d="M 264 96 A 160 160 0 0 0 264 416"
+      fill="none"
+      stroke="#FFFFFF"
+      stroke-width="32"
+      stroke-linecap="round"
+    />
+
+    <!-- Main cyan/celeste circle -->
+    <circle cx="264" cy="256" r="120" fill="#2B82C9" />
+
+    <!-- Inner dark circle -->
+    <circle cx="264" cy="256" r="76" fill="#0B192C" />
+
+    <!-- Left arrow needle -->
+    <path d="M 194 256 L 236 226 L 236 286 Z" fill="#FFFFFF" />
+
+    <!-- Right arrow needle -->
+    <path d="M 334 256 L 292 226 L 292 286 Z" fill="#FFFFFF" />
+
+    <!-- Central warm golden dot -->
+    <circle cx="264" cy="256" r="22" fill="#FFD062" stroke="#FFFFFF" stroke-width="4.5" />
+  </g>
+</svg>

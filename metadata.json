@@ -1,6 +1,8 @@
 {
-  "name": "Orienta IA · IFTS 12",
-  "description": "Orienta IA: Solución desarrollada para la Superintendencia de Servicios de Salud (SSSalud). Asistente de trámites y documentación.",
+  "name": "Remix Remix Orienta IA - Asistente Virtual SSSalud",
+  "description": "Orienta IA (IFTS 12): asistente que orienta sobre trámites de obras sociales y prepagas ante la SSSalud. Proyecto académico, no es un canal oficial.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

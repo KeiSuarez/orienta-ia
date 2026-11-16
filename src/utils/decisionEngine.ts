@@ -11,8 +11,8 @@ import {
   QuickReply,
   TramiteResultPayload,
   ResultadoConsulta
-} from '../types';
-import { TRAMITES_DATA, getTramiteById, CONDICION_LABELS, TIPO_ENTIDAD_LABELS } from '../data/tramitesData';
+} from '../data/db/types';
+import { TRAMITES_DATA, getTramiteById, CONDICION_LABELS, TIPO_ENTIDAD_LABELS } from '../data/db/tramitesData';
 
 export interface DecisionState {
   step: 'init' | 'disambiguation' | 'ask_entidad' | 'ask_condicion' | 'ask_beneficiario' | 'complete' | 'derived' | 'out_of_scope';
@@ -124,8 +124,7 @@ export function evaluateUserMessage(userInput: string, currentState: DecisionSta
       loggedOutcome: 'Aclaró su alcance',
       loggedTramiteId: '(sin clasificar)',
       quickReplies: [
-        { label: 'Tengo un problema con mi obra social o prepaga', value: 'Tengo un problema de salud para consultar', type: 'reintento' },
-        { label: 'Ver los 11 trámites disponibles', value: 'Ver catálogo de trámites', type: 'accion' }
+        { label: 'Tengo un problema con mi obra social o prepaga', value: 'Tengo un problema de salud para consultar', type: 'reintento' }
       ]
     };
   }
@@ -425,7 +424,7 @@ export function evaluateUserMessage(userInput: string, currentState: DecisionSta
 /**
  * Prompts the user step-by-step for any missing data (tipo de cobertura, condición laboral, beneficiario).
  */
-function promptMissingData(state: DecisionState): DecisionResponse {
+export function promptMissingData(state: DecisionState): DecisionResponse {
   const tramite = state.tramiteId ? getTramiteById(state.tramiteId) : undefined;
   if (!tramite) {
     return {
@@ -488,7 +487,7 @@ function promptMissingData(state: DecisionState): DecisionResponse {
 /**
  * Builds the final structured answer complying with Section 3.3 and 3.4.
  */
-function generateFinalAnswer(state: DecisionState): DecisionResponse {
+export function generateFinalAnswer(state: DecisionState): DecisionResponse {
   const tramite = state.tramiteId ? getTramiteById(state.tramiteId) : undefined;
   if (!tramite) {
     return {
@@ -620,4 +619,42 @@ export function startConsultationForTramite(tramiteId: string): DecisionResponse
   };
 
   return promptMissingData(initialState);
+}
+
+
+/* ------------------------------------------------------------------
+ * Detectores por palabra clave (usados por el motor híbrido).
+ * Devuelven null cuando el texto no permite decidir, para que el motor
+ * híbrido pueda pedirle a Gemini que interprete la respuesta.
+ * ------------------------------------------------------------------ */
+
+export function detectarTipoEntidad(texto: string): TipoEntidad | null {
+  const norm = normalize(texto);
+  if (norm.includes('prepaga')) return 'prepaga';
+  if (norm.includes('obra social') || norm.includes('obrasocial')) return 'obra_social';
+  return null;
+}
+
+export function detectarCondicion(texto: string): CondicionLaboral | null {
+  const norm = normalize(texto);
+  if (norm.includes('monotributo social')) return 'monotributo_social';
+  if (norm.includes('monotribut')) return 'monotributista';
+  if (norm.includes('servicio domestico') || norm.includes('empleada domestica') || norm.includes('casas particulares')) return 'servicio_domestico';
+  if (norm.includes('jubilad') || norm.includes('pensionad')) return 'jubilado_pensionado';
+  if (norm.includes('desempleo')) return 'seguro_desempleo';
+  if (norm.includes('adherente')) return 'prepaga_adherente';
+  if (norm.includes('dependencia') || norm.includes('sueldo') || norm.includes('empleado') || norm.includes('en blanco')) return 'relacion_dependencia';
+  return null;
+}
+
+export function detectarBeneficiario(texto: string): Beneficiario | null {
+  const norm = normalize(texto);
+  // Primero los familiares, para que "para mi papá" no se tome como "para mí".
+  if (norm.includes('cud') || norm.includes('discapacidad')) return 'persona_cud';
+  if (norm.includes('conyuge') || norm.includes('pareja') || norm.includes('marido') || norm.includes('espos') || norm.includes('conviviente')) return 'conyuge_conviviente';
+  if (norm.includes('estudiante') || norm.includes('facultad') || norm.includes('universidad')) return 'hijo_estudiante_21_25';
+  if (norm.includes('menor') || norm.includes('hijo') || norm.includes('hija') || norm.includes('bebe')) return 'hijo_menor_21';
+  if (/\b(mama|papa|madre|padre|abuel|herman|ti[oa])\b/.test(norm)) return null; // no es un beneficiario directo: decide la IA o se repregunta
+  if (norm.includes('titular') || /\bpara mi\b/.test(norm) || norm.includes('yo mismo') || norm.includes('yo misma') || norm.includes('soy yo')) return 'titular';
+  return null;
 }
