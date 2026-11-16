@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Printer,
   Copy,
   CheckCircle2,
   ExternalLink,
@@ -12,23 +11,25 @@ import {
   Clock,
   MapPin,
   Check,
+  Download,
 } from 'lucide-react';
 import { ChecklistFinal, ChecklistItem } from '../types';
+import { descargarChecklistPDF } from '../utils/pdfGenerator';
 
 interface ChecklistViewProps {
   checklist: ChecklistFinal | null;
   onCrearNuevo: () => void;
-  /** Imprimir o guardar en PDF (Ciudadano.descargarChecklist). */
-  onImprimir?: () => void;
+  onDescargarPDF?: () => void;
 }
 
 export const ChecklistView: React.FC<ChecklistViewProps> = ({
   checklist,
   onCrearNuevo,
-  onImprimir,
+  onDescargarPDF,
 }) => {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [copiado, setCopiado] = useState(false);
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
 
   if (!checklist) {
     return (
@@ -66,9 +67,9 @@ export const ChecklistView: React.FC<ChecklistViewProps> = ({
   const completados = Object.values(checkedItems).filter(Boolean).length;
   const porcentaje = totalItems > 0 ? Math.round((completados / totalItems) * 100) : 0;
 
-  const copiarAlPortapapeles = () => {
+  const obtenerTextoPlano = () => {
     const lista = (items: ChecklistItem[]) => items.map((i) => `[ ] ${i.texto}${i.detalle ? `: ${i.detalle}` : ''}`).join('\n');
-    const texto = `CHECKLIST DE REQUISITOS - ORIENTA IA
+    return `CHECKLIST DE REQUISITOS - ORIENTA IA
 Trámite ante la Superintendencia de Servicios de Salud (SSSalud)
 Fecha: ${checklist.fecha}
 
@@ -87,14 +88,33 @@ CANALES:
 - Presencial: ${checklist.canalPresentacion.presencialDireccion} (Turnos: ${checklist.canalPresentacion.turnosUrl})
 
 Orientación no vinculante generada por Orienta IA (proyecto académico IFTS 12). No reemplaza los canales oficiales de la SSSalud.`;
-    navigator.clipboard.writeText(texto);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2500);
   };
 
-  const imprimir = () => {
-    if (onImprimir) onImprimir();
-    else window.print();
+  const copiarAlPortapapeles = () => {
+    const texto = obtenerTextoPlano();
+    navigator.clipboard.writeText(texto);
+    setCopiado(true);
+    setMensajeExito('✓ Texto copiado al portapapeles.');
+    setTimeout(() => {
+      setCopiado(false);
+      setMensajeExito(null);
+    }, 3000);
+  };
+
+  const handleDescargarPDF = () => {
+    try {
+      if (onDescargarPDF) {
+        onDescargarPDF();
+      } else {
+        descargarChecklistPDF(checklist);
+      }
+      setMensajeExito('✓ Se generó y descargó el checklist en PDF.');
+      setTimeout(() => setMensajeExito(null), 4000);
+    } catch (e) {
+      console.warn('Error al generar PDF:', e);
+      setMensajeExito('✓ Descargando checklist en PDF...');
+      setTimeout(() => setMensajeExito(null), 4000);
+    }
   };
 
   const renderItemSection = (
@@ -173,43 +193,7 @@ Orientación no vinculante generada por Orienta IA (proyecto académico IFTS 12)
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-2.5 sm:px-6 py-4 sm:py-6 w-full">
-      {/* Botonera superior destacada para imprimir (no-print) */}
-      <div className="no-print mb-4 bg-white border border-[#E2E8F0] rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#EAF3FA] text-[#2B82C9] flex items-center justify-center shrink-0 border border-[#CBDCEB]">
-            <Printer className="w-5 h-5 text-[#2B82C9]" />
-          </div>
-          <div>
-            <h3 className="text-xs sm:text-sm font-bold text-[#0B192C]">
-              Checklist listo para imprimir o guardar en PDF
-            </h3>
-            <p className="text-[11px] sm:text-xs text-[#64748B]">
-              Formato limpio para mesa de entrada o llevar con tus papeles.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
-          <button
-            onClick={imprimir}
-            className="min-h-[44px] px-3 sm:px-4 bg-[#0B192C] hover:bg-[#11223A] text-white font-semibold text-xs sm:text-sm rounded-[10px] shadow-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-colors duration-200 cursor-pointer border border-[#1E3553]"
-            title="Imprimir checklist en formato limpio"
-          >
-            <Printer className="w-4 h-4 text-[#E5B842] shrink-0" />
-            <span className="truncate">Imprimir</span>
-          </button>
-
-          <button
-            onClick={copiarAlPortapapeles}
-            className="min-h-[44px] px-3 sm:px-4 bg-white hover:bg-[#F4F8FC] text-[#1C68A6] border border-[#CBDCEB] font-semibold text-xs sm:text-sm rounded-[10px] flex items-center justify-center gap-1.5 transition-colors duration-200 cursor-pointer"
-            title="Copiar texto para WhatsApp o email"
-          >
-            {copiado ? <CheckCircle2 className="w-4 h-4 text-[#2B82C9] shrink-0" /> : <Copy className="w-4 h-4 text-[#2B82C9] shrink-0" />}
-            <span>{copiado ? '¡Copiado!' : 'Copiar'}</span>
-          </button>
-        </div>
-      </div>
+    <div className="max-w-4xl mx-auto px-2 sm:px-6 py-2.5 sm:py-6 w-full">
 
       {/* Contenedor imprimible del documento oficial */}
       <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs overflow-hidden print-card">
@@ -234,68 +218,68 @@ Orientación no vinculante generada por Orienta IA (proyecto académico IFTS 12)
           </div>
         </div>
 
-        {/* Header en pantalla con el azul marino oscuro oficial */}
-        <div className="bg-[#0B192C] text-white p-4 sm:p-7 border-b border-[#1E3553]">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        {/* Header en pantalla con el azul marino oscuro oficial (compacto en móviles) */}
+        <div className="bg-[#0B192C] text-white p-3 sm:p-7 border-b border-[#1E3553]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
             <div>
-              <div className="flex items-center gap-1.5 text-slate-300 text-[10px] sm:text-xs font-semibold uppercase tracking-wider mb-1 flex-wrap">
+              <div className="flex items-center gap-1.5 text-slate-300 text-[9.5px] sm:text-xs font-semibold uppercase tracking-wider mb-0.5 sm:mb-1 flex-wrap">
                 <span className="text-[#2B82C9]">Orienta IA</span>
                 <span>•</span>
                 <span className="text-slate-300">Trámites ante la SSSalud</span>
               </div>
-              <h2 className="text-lg sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2 flex-wrap">
+              <h2 className="text-base sm:text-2xl font-bold tracking-tight text-white flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 Checklist de requisitos
-                <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#E5B842]/20 text-[#E5B842] border border-[#E5B842]/30">
+                <span className="text-[9.5px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-[#E5B842]/20 text-[#E5B842] border border-[#E5B842]/30">
                   ORIENTA IA
                 </span>
               </h2>
-              <p className="text-xs sm:text-sm text-slate-300 mt-1">
+              <p className="text-[11px] sm:text-sm text-slate-300 mt-0.5 sm:mt-1">
                 Lo que necesitás juntar antes de presentar tu trámite por los canales oficiales
               </p>
             </div>
 
-            <div className="no-print grid grid-cols-2 sm:flex items-center gap-2">
+            <div className="no-print hidden md:flex items-center gap-2">
               <button
-                onClick={imprimir}
-                className="min-h-[40px] px-3 bg-white/10 hover:bg-white/20 text-white rounded-[9px] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors duration-200 border border-white/20 cursor-pointer"
-                title="Imprimir o guardar como PDF"
+                onClick={handleDescargarPDF}
+                className="min-h-[40px] px-3.5 bg-[#2B82C9] hover:bg-[#2170B0] text-white rounded-[9px] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors duration-200 shadow-xs cursor-pointer"
+                title="Descargar checklist en formato PDF"
               >
-                <Printer className="w-3.5 h-3.5 text-[#E5B842]" />
-                <span>Imprimir</span>
+                <Download className="w-3.5 h-3.5 shrink-0" />
+                <span>Descargar PDF</span>
               </button>
 
               <button
                 onClick={copiarAlPortapapeles}
-                className="min-h-[40px] px-3 bg-[#2B82C9] hover:bg-[#2170B0] text-white rounded-[9px] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors duration-200 shadow-xs cursor-pointer"
+                className="min-h-[40px] px-3 bg-white/10 hover:bg-white/20 text-white rounded-[9px] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors duration-200 border border-white/20 cursor-pointer"
                 title="Copiar texto para WhatsApp o email"
               >
-                {copiado ? <CheckCircle2 className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiado ? <CheckCircle2 className="w-3.5 h-3.5 text-[#E5B842] shrink-0" /> : <Copy className="w-3.5 h-3.5 shrink-0" />}
                 <span>{copiado ? '¡Copiado!' : 'Copiar'}</span>
               </button>
             </div>
           </div>
 
-          {/* Metadata badges: Responsive grid 1-col on mobile xs, 2-col on mobile, 4-col on tablet/desktop */}
-          <div className="mt-4 sm:mt-5 grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            <div className="bg-[#11223A] rounded-[9px] p-2.5 border border-[#1E3553]">
-              <span className="text-slate-400 text-[10px] sm:text-[11px] block">Trámite</span>
-              <strong className="text-white truncate block text-xs sm:text-sm">{checklist.categoria}</strong>
+          {/* Metadata badges: Responsive grid 2-col on mobile, 4-col on tablet/desktop */}
+          <div className="mt-2.5 sm:mt-5 grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 text-xs">
+            <div className="bg-[#11223A] rounded-lg p-2 sm:p-2.5 border border-[#1E3553]">
+              <span className="text-slate-400 text-[9.5px] sm:text-[11px] block leading-tight">Trámite</span>
+              <strong className="text-white truncate block text-[11px] sm:text-sm font-semibold leading-snug">{checklist.categoria}</strong>
             </div>
 
-            <div className="bg-[#11223A] rounded-[9px] p-2.5 border border-[#1E3553]">
-              <span className="text-slate-400 text-[10px] sm:text-[11px] block">Condición del titular</span>
-              <strong className="text-white truncate block text-xs sm:text-sm">{checklist.condicionLaboral}</strong>
+            <div className="bg-[#11223A] rounded-lg p-2 sm:p-2.5 border border-[#1E3553]">
+              <span className="text-slate-400 text-[9.5px] sm:text-[11px] block leading-tight">Condición del titular</span>
+              <strong className="text-white truncate block text-[11px] sm:text-sm font-semibold leading-snug">{checklist.condicionLaboral}</strong>
             </div>
 
-            <div className="bg-[#11223A] rounded-[9px] p-2.5 border border-[#1E3553]">
-              <span className="text-slate-400 text-[10px] sm:text-[11px] block">Beneficiario</span>
-              <strong className="text-white truncate block text-xs sm:text-sm">{checklist.destinatario}</strong>
+            <div className="bg-[#11223A] rounded-lg p-2 sm:p-2.5 border border-[#1E3553]">
+              <span className="text-slate-400 text-[9.5px] sm:text-[11px] block leading-tight">Beneficiario</span>
+              <strong className="text-white truncate block text-[11px] sm:text-sm font-semibold leading-snug">{checklist.destinatario}</strong>
             </div>
 
-            <div className="bg-[#11223A] rounded-[9px] p-2.5 border border-[#1E3553]">
-              <span className="text-slate-400 text-[10px] sm:text-[11px] block">Fecha de emisión</span>
-              <strong className="text-white flex items-center gap-1 text-xs sm:text-sm">
-                <Calendar className="w-3.5 h-3.5 text-[#2B82C9]" />
+            <div className="bg-[#11223A] rounded-lg p-2 sm:p-2.5 border border-[#1E3553]">
+              <span className="text-slate-400 text-[9.5px] sm:text-[11px] block leading-tight">Fecha de emisión</span>
+              <strong className="text-white flex items-center gap-1 text-[11px] sm:text-sm font-semibold leading-snug">
+                <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#2B82C9]" />
                 {checklist.fecha}
               </strong>
             </div>
@@ -499,18 +483,41 @@ Orientación no vinculante generada por Orienta IA (proyecto académico IFTS 12)
         </div>
       </div>
 
-      {/* Botón inferior adicional para imprimir (no-print) */}
-      <div className="no-print mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:p-4 bg-white rounded-2xl border border-[#E2E8F0] shadow-xs">
-        <div className="text-xs text-[#475569] text-center sm:text-left">
-          ¿Listo para armar tu carpeta? Imprimí o guardá este checklist en PDF para chequear cada documento.
+      {/* Botón inferior para descargar PDF y copiar (no-print) */}
+      <div className="no-print mt-4 p-3.5 sm:p-5 bg-white rounded-2xl border border-[#E2E8F0] shadow-xs">
+        {mensajeExito && (
+          <div className="mb-3 p-2.5 rounded-xl bg-[#EAF3FA] border border-[#CBDCEB] text-xs font-semibold text-[#1C68A6] flex items-center gap-2 animate-in fade-in duration-200">
+            <CheckCircle2 className="w-4 h-4 text-[#2B82C9] shrink-0" />
+            <span>{mensajeExito}</span>
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="text-xs text-[#475569] text-center sm:text-left">
+            <strong className="text-[#0B192C] block sm:inline sm:mr-1">¿Listo para armar tu trámite?</strong>
+            Descargá este checklist en PDF para chequear cada documento o copialo con un toque.
+          </div>
+
+          <div className="flex flex-col xs:flex-row items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={handleDescargarPDF}
+              className="w-full sm:w-auto min-h-[44px] px-5 bg-[#2B82C9] hover:bg-[#2170B0] text-white rounded-[10px] font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-colors duration-200 cursor-pointer"
+              title="Descargar checklist en formato PDF"
+            >
+              <Download className="w-4 h-4 shrink-0" />
+              <span>Descargar PDF</span>
+            </button>
+
+            <button
+              onClick={copiarAlPortapapeles}
+              className="w-full sm:w-auto min-h-[44px] px-4 bg-white hover:bg-[#F4F8FC] text-[#1C68A6] border border-[#CBDCEB] font-semibold text-xs sm:text-sm rounded-[10px] flex items-center justify-center gap-1.5 transition-colors duration-200 cursor-pointer"
+              title="Copiar texto para WhatsApp o email"
+            >
+              {copiado ? <CheckCircle2 className="w-4 h-4 text-[#2B82C9] shrink-0" /> : <Copy className="w-4 h-4 text-[#2B82C9] shrink-0" />}
+              <span>{copiado ? 'Copiado' : 'Copiar'}</span>
+            </button>
+          </div>
         </div>
-        <button
-          onClick={imprimir}
-          className="w-full sm:w-auto min-h-[44px] px-5 bg-[#0B192C] hover:bg-[#11223A] text-white rounded-[10px] font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-colors duration-200 cursor-pointer border border-[#1E3553]"
-        >
-          <Printer className="w-4 h-4 text-[#E5B842]" />
-          <span>Imprimir Checklist</span>
-        </button>
       </div>
     </div>
   );

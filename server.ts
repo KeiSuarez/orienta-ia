@@ -23,7 +23,7 @@ app.use(express.json({ limit: '12mb' }));
 /* base de trámites (ver src/modelo/AsistenteIA.ts).                    */
 /* ------------------------------------------------------------------ */
 
-const MODELO_GEMINI = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+const MODELO_GEMINI = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 const apiKey = process.env.GEMINI_API_KEY;
 let ai: GoogleGenAI | null = null;
 if (apiKey) {
@@ -41,26 +41,24 @@ function conTimeout<T>(promesa: Promise<T>, ms: number): Promise<T> {
 }
 
 /** Modelo alternativo si el principal está saturado (opcional, por Secrets). */
-const MODELO_RESPALDO = process.env.GEMINI_MODEL_RESPALDO || '';
+const MODELO_RESPALDO = process.env.GEMINI_MODEL_RESPALDO || 'gemini-3.5-flash';
 
 function esErrorTemporal(error: any): boolean {
   const texto = String(error?.message || error || '');
-  return /503|429|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand|overloaded|timeout/i.test(texto);
+  return /503|429|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand|overloaded|timeout|404|NOT_FOUND/i.test(texto);
 }
 
 /**
- * Llama a Gemini con reintentos cuando el modelo está saturado (error 503 "high demand").
- * Intenta: modelo principal -> espera y reintenta -> modelo de respaldo (si está configurado).
+ * Llama a Gemini con reintentos cuando el modelo está saturado o no disponible.
+ * Intenta: modelo principal -> modelo de respaldo (gemini-3.5-flash) -> modelo liviano (gemini-3.1-flash-lite).
  */
 async function generarConReintento(params: any, msPorIntento: number): Promise<any> {
   if (!ai) throw new Error('IA no configurada');
   const intentos: { modelo: string; espera: number }[] = [
     { modelo: MODELO_GEMINI, espera: 0 },
-    { modelo: MODELO_GEMINI, espera: 1200 },
+    { modelo: MODELO_RESPALDO, espera: 200 },
+    { modelo: 'gemini-3.1-flash-lite', espera: 200 },
   ];
-  if (MODELO_RESPALDO && MODELO_RESPALDO !== MODELO_GEMINI) {
-    intentos.push({ modelo: MODELO_RESPALDO, espera: 300 });
-  }
 
   let ultimoError: any;
   for (const intento of intentos) {
@@ -128,17 +126,29 @@ app.post('/api/ai/audit-document', async (req: Request, res: Response) => {
     try {
       const partes: any[] = [];
       if (typeof documentBase64 === 'string' && documentBase64.includes('base64,')) {
+        let detectedMime = typeof mimeType === 'string' && mimeType ? mimeType : 'image/jpeg';
+        if (detectedMime.includes('pdf')) detectedMime = 'application/pdf';
+        else if (detectedMime.includes('png')) detectedMime = 'image/png';
+        else if (detectedMime.includes('webp')) detectedMime = 'image/webp';
+        else if (detectedMime.includes('jpeg') || detectedMime.includes('jpg')) detectedMime = 'image/jpeg';
+
         partes.push({
           inlineData: {
-            mimeType: typeof mimeType === 'string' ? mimeType : 'image/jpeg',
+            mimeType: detectedMime,
             data: documentBase64.split('base64,')[1],
           },
         });
       }
       partes.push({
-        text: `Revisá este documento para un trámite ante la SSSalud${tipoTramite ? ` ("${tipoTramite}")` : ''}.
-${documentText ? `Texto aportado por la persona: ${enmascararDatos(String(documentText))}` : ''}
-Indicá si se ve firma, sello con matrícula, diagnóstico y fecha. No transcribas nombres, DNI ni números de afiliado.`,
+        text: `Revisá exhaustivamente este documento médico (imagen o PDF de prescripción médica, orden de estudio o historia clínica) para un trámite ante la Superintendencia de Servicios de Salud (SSSalud)${tipoTramite ? ` (Trámite: "${tipoTramite}")` : ''}.
+${documentText ? `Texto adicional aportado por la persona: ${enmascararDatos(String(documentText))}` : ''}
+Analizá:
+1. Tipo exacto de documento (ej.: Prescripción médica electrónica, Orden médica, Resumen de historia clínica).
+2. Firma del profesional (manuscrita o electrónica/digital validada por REFEPS/código de barras/QR).
+3. Nombre y matrícula médica (M.N. o M.P.) y especialidad si figura.
+4. Diagnóstico (Dx), indicación clínica o principio activo / DCI del medicamento.
+5. Fecha de emisión y vigencia.
+No transcribas datos identificatorios del paciente (nombre, DNI, CUIL, número de afiliado).`,
       });
 
       const respuesta: any = await generarConReintento(
@@ -146,8 +156,7 @@ Indicá si se ve firma, sello con matrícula, diagnóstico y fecha. No transcrib
           contents: [{ role: 'user', parts: partes }],
           config: {
             systemInstruction:
-              'Sos un revisor orientativo de documentación médica para trámites de obras sociales en Argentina. Respondés en español rioplatense, breve y claro. Nunca repetís datos personales. Tu revisión es orientativa, no una aprobación oficial.',
-            temperature: 0.2,
+              'Sos un auditor y revisor orientativo experto en documentación médica para trámites ante la Superintendencia de Servicios de Salud (SSSalud) en Argentina. Identificás prescripciones electrónicas (Ley de Receta Digital), órdenes de prácticas y certificados médicos. Respondés siempre en formato JSON estructurado, en español rioplatense, claro y empático. Si el documento tiene firma (electrónica o manuscrita), matrícula médica, diagnóstico y fecha, consideralo "Parece completo".',
             responseMimeType: 'application/json',
             responseSchema: {
               type: Type.OBJECT,
@@ -162,11 +171,11 @@ Indicá si se ve firma, sello con matrícula, diagnóstico y fecha. No transcrib
             },
           },
         },
-        15000
+        28000
       );
       return res.json(JSON.parse(respuesta?.text || '{}'));
     } catch (error: any) {
-      console.warn('Revisión con IA no disponible:', error?.message || error);
+      console.error('ERROR en /api/ai/audit-document:', error?.message || error);
     }
   }
 

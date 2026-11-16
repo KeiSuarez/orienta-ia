@@ -118,7 +118,7 @@ export default function App() {
   const enAdmin = modo === 'admin' && administrador !== null;
 
   return (
-    <div className="min-h-screen bg-[#F4F7FB] text-[#0F172A] flex flex-col font-sans relative antialiased overflow-x-hidden w-full">
+    <div className="h-[100dvh] md:min-h-screen md:h-auto bg-[#F4F7FB] text-[#0F172A] flex flex-col font-sans relative antialiased overflow-hidden md:overflow-x-hidden w-full">
       <Header
         modo={enAdmin ? 'admin' : 'ciudadano'}
         tabCiudadano={tabCiudadano}
@@ -132,7 +132,7 @@ export default function App() {
       />
 
       {enAdmin ? (
-        <main className="flex-1 py-1.5 sm:py-4 px-1 xs:px-2 sm:px-4 w-full max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto md:overflow-visible py-1.5 sm:py-4 px-1 xs:px-2 sm:px-4 w-full max-w-7xl mx-auto">
           {tabAdmin === 'panel' && <PanelOrganismo />}
           {tabAdmin === 'consultas' && administrador && (
             <ConsultasRegistradas administrador={administrador} onSesionVencida={handleLogout} />
@@ -141,19 +141,23 @@ export default function App() {
         </main>
       ) : (
         <>
-          <div className="no-print w-full">
+          <div className="no-print w-full hidden md:block">
             <ReglaDeOroBanner />
           </div>
 
           {(tabCiudadano === 'chat' || tabCiudadano === 'checklist') && (
-            <div className="no-print w-full">
+            <div className="no-print w-full hidden md:block">
               <TrackingPills datos={datos} onUpdateDatos={handleDatosManual} />
             </div>
           )}
 
-          <main className="flex-1 py-1.5 sm:py-4 px-1 xs:px-2 sm:px-4 w-full max-w-7xl mx-auto flex flex-col">
+          <main
+            className={`flex-1 min-h-0 py-1 sm:py-4 px-1 xs:px-2 sm:px-4 w-full max-w-7xl mx-auto flex flex-col ${
+              tabCiudadano === 'chat' ? 'overflow-hidden md:overflow-visible' : 'overflow-y-auto md:overflow-visible'
+            }`}
+          >
             {/* El chat queda montado para no perder la conversación al cambiar de pestaña */}
-            <div className={tabCiudadano === 'chat' ? 'contents' : 'hidden'}>
+            <div className={tabCiudadano === 'chat' ? 'flex-1 min-h-0 flex flex-col' : 'hidden'}>
               <ChatInterface
                 ciudadano={ciudadano}
                 onUpdateDatos={setDatos}
@@ -168,7 +172,13 @@ export default function App() {
               <ChecklistView
                 checklist={checklist ? checklist.mostrar() : null}
                 onCrearNuevo={() => setTabCiudadano('chat')}
-                onImprimir={() => checklist && ciudadano.descargarChecklist(checklist)}
+                onDescargarPDF={() => {
+                  try {
+                    if (checklist) ciudadano.descargarChecklist(checklist);
+                  } catch (e) {
+                    console.warn(e);
+                  }
+                }}
               />
             )}
 

@@ -46,7 +46,7 @@ export const ReglaDeOroBanner: React.FC = () => {
                   <ul className="space-y-1 list-disc list-inside text-[#475569] text-[11px] sm:text-xs">
                     <li>Te escucha con empatía en tu propio lenguaje.</li>
                     <li>Revisa tu situación y condición de aportes.</li>
-                    <li>Te entrega el checklist listo para imprimir.</li>
+                    <li>Te entrega el checklist listo en PDF.</li>
                   </ul>
                 </div>
 

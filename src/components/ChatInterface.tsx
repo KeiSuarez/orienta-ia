@@ -277,7 +277,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const lines = content.split('\n');
 
     return (
-      <div className="space-y-2 text-[14px] sm:text-[15px] font-normal leading-relaxed text-[#0F172A]">
+      <div className="space-y-1.5 text-[12.5px] sm:text-[13.5px] font-normal leading-normal text-[#0F172A]">
         {lines.map((line, idx) => {
           const trimmed = line.trim();
 
@@ -285,7 +285,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             return (
               <h4
                 key={idx}
-                className="text-[15px] sm:text-[16px] font-bold text-[#2B82C9] uppercase tracking-wide pt-2.5 pb-1 border-b border-[#E2E8F0] flex items-center gap-2"
+                className="text-[13px] sm:text-[14px] font-bold text-[#2B82C9] uppercase tracking-wide pt-1.5 pb-0.5 border-b border-[#E2E8F0] flex items-center gap-2"
               >
                 <span className="w-2 h-2 rounded-full bg-[#2B82C9] shrink-0" />
                 <span>{trimmed.replace('### ', '')}</span>
@@ -296,7 +296,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           if (trimmed.startsWith('• ') || trimmed.startsWith('- ')) {
             const itemText = trimmed.replace(/^[•-]\s*/, '');
             return (
-              <div key={idx} className="flex items-start gap-2 pl-0.5 text-[#0F172A]">
+              <div key={idx} className="flex items-start gap-1.5 pl-0.5 text-[#0F172A]">
                 <span className="text-[#2B82C9] font-bold leading-5 shrink-0">•</span>
                 <span
                   className="flex-1"
@@ -314,7 +314,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             return (
               <div
                 key={idx}
-                className="p-3 bg-[#EAF3FA]/80 border-l-3 border-[#2B82C9] rounded-r-xl text-xs sm:text-sm text-[#0B192C] my-2 leading-relaxed"
+                className="p-2 sm:p-2.5 bg-[#EAF3FA]/80 border-l-3 border-[#2B82C9] rounded-r-xl text-[11.5px] sm:text-xs text-[#0B192C] my-1.5 leading-normal"
                 dangerouslySetInnerHTML={{
                   __html: escapeHtml(trimmed).replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-[#2B82C9]">$1</strong>'),
                 }}
@@ -323,7 +323,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           }
 
           if (trimmed === '') {
-            return <div key={idx} className="h-1" />;
+            return <div key={idx} className="h-0.5" />;
           }
 
           return (
@@ -343,9 +343,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-185px)] min-h-[480px] sm:min-h-[550px] max-w-5xl mx-auto px-2 sm:px-4 py-2 sm:py-3 w-full">
-      {/* Friendly Human Bar: Reorganizes into single column / responsive wrap on mobile */}
-      <div className="mb-2 bg-white px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-2xs">
+    <div className="flex flex-col flex-1 min-h-0 md:h-[calc(100dvh-185px)] md:min-h-[550px] max-w-5xl mx-auto px-1.5 xs:px-2 sm:px-4 pt-0 pb-1 sm:py-3 w-full">
+      {/* Friendly Human Bar: Visible on desktop (md+), hidden on mobile to maximize chat input space */}
+      <div className="mb-2 bg-white px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl border border-[#E2E8F0] hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-2xs">
         <div className="flex items-center gap-2.5 text-[#0F172A]">
           <OrientaLogo size="sm" />
           <div className="min-w-0">
@@ -382,7 +382,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       {/* Chat scrollable feed */}
-      <div ref={feedRef} className="flex-1 overflow-y-auto custom-scrollbar bg-white rounded-2xl p-3 sm:p-6 border border-[#E2E8F0] space-y-3.5 sm:space-y-4 shadow-xs">
+      <div ref={feedRef} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-white rounded-2xl p-2.5 sm:p-5 border border-[#E2E8F0] space-y-2 sm:space-y-3.5 shadow-xs">
         {messages.map((msg) => {
           const isAsst = msg.role === 'assistant';
 
@@ -398,7 +398,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               )}
 
               <div
-                className={`w-full max-w-[94%] sm:max-w-[82%] rounded-2xl p-3.5 sm:p-4 shadow-2xs transition-all ${
+                className={`w-full max-w-[96%] sm:max-w-[82%] rounded-2xl p-2.5 sm:p-3.5 shadow-2xs transition-all ${
                   isAsst
                     ? 'bg-white text-[#0F172A] border border-[#E2E8F0] rounded-tl-sm'
                     : 'bg-[#0B192C] text-white rounded-tr-sm border border-[#1E3553]'
@@ -406,7 +406,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               >
                 {/* Speaker tag and timestamp */}
                 <div
-                  className={`flex items-center justify-between text-[11px] sm:text-[12px] mb-2 pb-1.5 border-b ${
+                  className={`flex items-center justify-between text-[11px] sm:text-[12px] mb-1.5 pb-1 border-b ${
                     isAsst
                       ? 'border-[#E2E8F0] text-[#64748B]'
                       : 'border-white/15 text-slate-300'
@@ -441,7 +441,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
                 {/* Aviso de privacidad si la persona escribió datos personales */}
                 {msg.avisoPrivacidad && (
-                  <div className="mb-2.5 flex items-start gap-2 rounded-[10px] border border-[#F4D381] bg-[#FEF8E7] p-2.5 text-[12px] sm:text-[13px] text-[#8C650A]">
+                  <div className="mb-2 flex items-start gap-2 rounded-[10px] border border-[#F4D381] bg-[#FEF8E7] p-2 text-[11.5px] sm:text-xs text-[#8C650A]">
                     <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
                     <span>{msg.avisoPrivacidad}</span>
                   </div>
@@ -451,22 +451,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 {isAsst ? (
                   renderFormattedContent(msg.content)
                 ) : (
-                  <p className="text-[14px] sm:text-[15px] font-normal leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                  <p className="text-[12.5px] sm:text-[13.5px] font-normal leading-normal whitespace-pre-wrap">{msg.content}</p>
                 )}
 
                 {/* If checklist was generated inside this message */}
                 {msg.checklist && (
-                  <div className="mt-4 pt-3 border-t border-[#E2E8F0] bg-[#EAF3FA] p-3.5 sm:p-4 rounded-xl border border-[#CBDCEB]">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="mt-3 pt-2.5 border-t border-[#E2E8F0] bg-[#EAF3FA] p-3 sm:p-3.5 rounded-xl border border-[#CBDCEB]">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-lg bg-[#0B192C] text-[#E5B842] flex items-center justify-center shrink-0 shadow-xs border border-[#1E3553]">
-                          <CheckCircle className="w-5 h-5 text-[#E5B842]" />
+                        <div className="w-8 h-8 rounded-lg bg-[#0B192C] text-[#E5B842] flex items-center justify-center shrink-0 shadow-xs border border-[#1E3553]">
+                          <CheckCircle className="w-4 h-4 text-[#E5B842]" />
                         </div>
                         <div>
                           <span className="text-xs sm:text-sm font-bold text-[#0B192C] block">
                             Tu checklist está listo
                           </span>
-                          <span className="text-[11px] sm:text-[12px] text-[#475569]">
+                          <span className="text-[10.5px] sm:text-[11.5px] text-[#475569]">
                             {msg.checklist.docGeneral.length +
                               msg.checklist.docMedica.length +
                               msg.checklist.docLaboral.length}{' '}
@@ -477,30 +477,33 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
                       <button
                         onClick={onVerChecklist}
-                        className="w-full sm:w-auto min-h-[44px] px-4 bg-[#2B82C9] hover:bg-[#2170B0] text-white rounded-[10px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-xs transition-colors duration-200 cursor-pointer"
+                        className="w-full sm:w-auto min-h-[40px] px-3.5 bg-[#2B82C9] hover:bg-[#2170B0] text-white rounded-[10px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-xs transition-colors duration-200 cursor-pointer"
                       >
                         <FileText className="w-4 h-4" />
-                        Abrir Checklist & Imprimir
+                        Ver Checklist & Descargar PDF
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* Quick replies chips with touch-friendly 44px min-height targets */}
+                {/* Quick replies chips: 2 options on welcome message; on follow-up questions hide if > 2 options */}
                 {msg.quickReplies && msg.quickReplies.length > 0 && (
-                  <div className="mt-3.5 pt-2.5 border-t border-[#E2E8F0]">
-                    <span className="text-[10px] sm:text-[11px] font-bold text-[#64748B] uppercase tracking-wider block mb-1.5">
-                      Podés responder rápido con un toque:
-                    </span>
+                  <div
+                    className={`mt-2 pt-1.5 border-t border-[#E2E8F0] ${
+                      !msg.id.startsWith('bienvenida') && msg.quickReplies.length > 2 ? 'hidden md:block' : 'block'
+                    }`}
+                  >
                     <div className="grid grid-cols-1 gap-1.5 sm:flex sm:flex-wrap">
                       {msg.quickReplies.map((reply, i) => (
                         <button
                           key={i}
                           onClick={() => manejarRespuestaRapida(reply)}
-                          className="w-full sm:w-auto min-h-[42px] px-3.5 py-2.5 rounded-[9px] bg-[#F4F8FC] hover:bg-[#EAF3FA] text-[#0B192C] text-xs font-semibold border border-[#E2E8F0] hover:border-[#2B82C9] transition-all duration-200 flex items-center justify-between sm:justify-start gap-2 cursor-pointer text-left"
+                          className={`w-full sm:w-auto min-h-[38px] px-3 py-1.5 rounded-[8px] bg-[#F4F8FC] hover:bg-[#EAF3FA] text-[#0B192C] text-[11.5px] sm:text-xs font-semibold border border-[#E2E8F0] hover:border-[#2B82C9] transition-all duration-200 items-center justify-between sm:justify-start gap-2 cursor-pointer text-left ${
+                            msg.id.startsWith('bienvenida') && i >= 2 ? 'hidden md:flex' : 'flex'
+                          }`}
                         >
                           <span className="leading-snug">{reply.label}</span>
-                          <ChevronRight className="w-4 h-4 text-[#2B82C9] shrink-0" />
+                          <ChevronRight className="w-3.5 h-3.5 text-[#2B82C9] shrink-0" />
                         </button>
                       ))}
                     </div>
@@ -546,14 +549,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <span>¿Tu consulta es sobre alguno de estos trámites?</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {sugerencias.map((s) => (
+            {sugerencias.map((s, idx) => (
               <button
                 key={s.id}
                 type="button"
                 role="option"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => elegirSugerencia(s.id, s.nombre)}
-                className="min-h-[38px] px-3 py-1.5 rounded-[9px] bg-[#F4F8FC] hover:bg-[#EAF3FA] text-[#0B192C] text-xs font-semibold border border-[#E2E8F0] hover:border-[#2B82C9] transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                className={`min-h-[38px] px-3 py-1.5 rounded-[9px] bg-[#F4F8FC] hover:bg-[#EAF3FA] text-[#0B192C] text-xs font-semibold border border-[#E2E8F0] hover:border-[#2B82C9] transition-colors items-center gap-1.5 cursor-pointer text-left ${
+                  idx >= 2 ? 'hidden md:flex' : 'flex'
+                }`}
               >
                 <span>{s.nombre}</span>
                 <ChevronRight className="w-3.5 h-3.5 text-[#2B82C9] shrink-0" />
@@ -563,8 +568,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       )}
 
-      {/* Input bar: 44px min-height targets and 16px mobile font to prevent auto-zoom */}
-      <div className="mt-2.5 sm:mt-3 bg-white p-1.5 sm:p-2.5 rounded-2xl border border-[#E2E8F0] shadow-xs">
+      {/* Input bar */}
+      <div className="mt-1.5 sm:mt-3 bg-white p-1.5 sm:p-2.5 rounded-2xl border border-[#E2E8F0] shadow-xs shrink-0">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -575,7 +580,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <button
             type="button"
             onClick={reiniciarConversacion}
-            className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-[#64748B] hover:text-[#0B192C] hover:bg-[#F4F8FC] rounded-[10px] transition-colors duration-200 cursor-pointer shrink-0"
+            className="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center text-[#64748B] hover:text-[#0B192C] hover:bg-[#F4F8FC] rounded-[10px] transition-colors duration-200 cursor-pointer shrink-0"
             title="Reiniciar conversación"
             aria-label="Reiniciar conversación"
           >
@@ -586,23 +591,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Escribí tu consulta (por ejemplo: no me cubren un medicamento)..."
+            placeholder="Escribí tu consulta..."
             aria-autocomplete="list"
-            className="flex-1 text-base sm:text-sm text-[#0F172A] placeholder-[#94A3B8] px-2.5 sm:px-3 py-2 bg-transparent focus:outline-none min-h-[44px]"
+            className="flex-1 text-[13px] sm:text-sm text-[#0F172A] placeholder-[#94A3B8] placeholder:text-[12.5px] sm:placeholder:text-sm px-2.5 sm:px-3 py-1.5 sm:py-2 bg-transparent focus:outline-none min-h-[40px] sm:min-h-[44px]"
             disabled={isTyping}
           />
 
           <button
             type="submit"
             disabled={!inputText.trim() || isTyping}
-            className={`min-h-[44px] px-3.5 sm:px-4 rounded-[10px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 shadow-xs shrink-0 ${
+            className={`min-h-[40px] sm:min-h-[44px] px-3.5 sm:px-4 rounded-[10px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 shadow-xs shrink-0 ${
               inputText.trim() && !isTyping
                 ? 'bg-[#2B82C9] hover:bg-[#2170B0] text-white cursor-pointer'
                 : 'bg-[#F4F8FC] text-[#94A3B8] cursor-not-allowed'
             }`}
           >
             <span className="hidden xs:inline">Enviar</span>
-            <Send className="w-4 h-4" />
+            <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </form>
       </div>

@@ -47,6 +47,8 @@ export const AiToolsModal: React.FC<AiToolsModalProps> = ({ categoriaActual }) =
     }
   };
 
+  const isPdf = !!docFile && (docFile.type === 'application/pdf' || docFile.name.toLowerCase().endsWith('.pdf'));
+
   const ejecutarAuditoria = async () => {
     if (!docPreview && !docText.trim()) return;
 
@@ -55,9 +57,10 @@ export const AiToolsModal: React.FC<AiToolsModalProps> = ({ categoriaActual }) =
     setAuditResult(null);
 
     try {
+      const mime = isPdf ? 'application/pdf' : (docFile?.type || 'image/jpeg');
       const res = await auditarDocumentoConIA({
         documentBase64: docPreview || undefined,
-        mimeType: docFile?.type || 'image/jpeg',
+        mimeType: mime,
         documentText: docText.trim() || undefined,
         tipoTramite: categoriaActual || 'Problema Prestacional / Cobertura',
       });
@@ -84,7 +87,7 @@ export const AiToolsModal: React.FC<AiToolsModalProps> = ({ categoriaActual }) =
               Revisá tu documentación con <span className="text-[#E5B842]">IA</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Verificá si tu receta, orden médica o historia clínica tiene lo básico (firma, sello con matrícula, diagnóstico y fecha) antes de presentarla. Es una revisión orientativa, no reemplaza la evaluación de la SSSalud.
+              Verificá si tu receta médica, orden médica, estudio o historia clínica (en foto o PDF) tiene lo reglamentario: firma, sello o validación digital REFEPS, matrícula, diagnóstico y fecha vigente.
             </p>
           </div>
 
@@ -102,19 +105,33 @@ export const AiToolsModal: React.FC<AiToolsModalProps> = ({ categoriaActual }) =
               </h3>
             </div>
             <p className="text-xs text-[#475569] mb-4 leading-relaxed">
-              Subí una foto o captura de tu <strong>receta médica, historia clínica o comprobante</strong>. La IA revisa si tiene firma, sello con matrícula, diagnóstico legible y fecha. <strong>Antes de subirla, tapá tu nombre, DNI y número de afiliado</strong>: no hacen falta para la revisión y la imagen no se guarda.
+              Subí una foto o archivo <strong>PDF de tu receta médica (física o electrónica), historia clínica o estudio</strong>. La IA revisa si tiene firma, matrícula médica, diagnóstico legible y fecha de vigencia. <strong>Por tu privacidad, tapá o difuminá nombre y DNI</strong> (no son necesarios para la revisión).
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Upload image box with comfortable touch area */}
-              <div className="border-2 border-dashed border-[#CBDCEB] hover:border-[#2B82C9] rounded-2xl p-4 sm:p-5 text-center transition-colors flex flex-col items-center justify-center bg-[#F8FAFD] min-h-[160px]">
+              {/* Upload image or PDF box with comfortable touch area */}
+              <div className="border-2 border-dashed border-[#CBDCEB] hover:border-[#2B82C9] rounded-2xl p-4 sm:p-5 text-center transition-colors flex flex-col items-center justify-center bg-[#F8FAFD] min-h-[170px]">
                 {docPreview ? (
                   <div className="w-full">
-                    <img
-                      src={docPreview}
-                      alt="Documento cargado"
-                      className="max-h-44 sm:max-h-48 rounded-lg mx-auto object-contain border border-[#E2E8F0] shadow-xs mb-3"
-                    />
+                    {isPdf ? (
+                      <div className="p-4 bg-white border border-[#CBDCEB] rounded-xl mb-3 flex flex-col items-center justify-center shadow-xs">
+                        <div className="w-14 h-14 rounded-2xl bg-[#EAF3FA] text-[#2B82C9] border border-[#CBDCEB] flex items-center justify-center mb-2 shadow-xs">
+                          <FileText className="w-8 h-8 text-[#2B82C9]" />
+                        </div>
+                        <span className="text-xs font-bold text-[#0B192C] truncate max-w-[240px]">
+                          {docFile?.name}
+                        </span>
+                        <span className="text-[10px] text-[#2B82C9] font-bold mt-1 px-2 py-0.5 rounded-full bg-[#EAF3FA] border border-[#CBDCEB] uppercase tracking-wider">
+                          Documento PDF • {docFile?.size ? (docFile.size / 1024).toFixed(0) + ' KB' : 'PDF'}
+                        </span>
+                      </div>
+                    ) : (
+                      <img
+                        src={docPreview}
+                        alt="Documento cargado"
+                        className="max-h-44 sm:max-h-48 rounded-lg mx-auto object-contain border border-[#E2E8F0] shadow-xs mb-3"
+                      />
+                    )}
                     <div className="flex items-center justify-center gap-2 flex-wrap">
                       <span className="text-xs font-semibold text-[#0F172A] truncate max-w-[180px]">
                         {docFile?.name}
@@ -123,6 +140,8 @@ export const AiToolsModal: React.FC<AiToolsModalProps> = ({ categoriaActual }) =
                         onClick={() => {
                           setDocFile(null);
                           setDocPreview(null);
+                          setAuditResult(null);
+                          setAuditError(null);
                         }}
                         className="min-h-[36px] px-2 text-xs text-rose-600 hover:underline font-semibold cursor-pointer"
                       >
@@ -134,14 +153,14 @@ export const AiToolsModal: React.FC<AiToolsModalProps> = ({ categoriaActual }) =
                   <label className="cursor-pointer flex flex-col items-center w-full py-2">
                     <Upload className="w-8 h-8 text-[#2B82C9] mb-2" />
                     <span className="text-xs font-bold text-[#0B192C]">
-                      Toca para subir foto o documento
+                      Toca para subir foto o archivo PDF
                     </span>
                     <span className="text-[11px] text-[#64748B] mt-1">
-                      Formatos: JPG, PNG, WEBP (hasta 10MB)
+                      Formatos: PDF, JPG, PNG, WEBP (hasta 10MB)
                     </span>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,application/pdf,.pdf"
                       onChange={handleFileChange}
                       className="hidden"
                     />
@@ -159,7 +178,7 @@ export const AiToolsModal: React.FC<AiToolsModalProps> = ({ categoriaActual }) =
                     rows={4}
                     value={docText}
                     onChange={(e) => setDocText(e.target.value)}
-                    placeholder="Ejemplo: 'Receto Leche medicamentosa Nutrilón Pepti por sospecha de APLV. Paciente de 3 meses... Dr. Gómez Mat. Nac. 123456'"
+                    placeholder="Ejemplo: 'Receto Losartán 50 mg (comp. x 30) por Dx: Hipertensión Arterial. Dr. Carlos Gómez M.N. 112233 - Fecha: 10/11/2026'"
                     className="w-full text-base sm:text-xs p-3 bg-[#F8FAFD] border border-[#E2E8F0] rounded-[10px] focus:outline-none focus:border-[#2B82C9]"
                   />
                 </div>
@@ -178,6 +197,13 @@ export const AiToolsModal: React.FC<AiToolsModalProps> = ({ categoriaActual }) =
                 </button>
               </div>
             </div>
+
+            {auditError && (
+              <div className="mt-3 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
+                <span>{auditError}</span>
+              </div>
+            )}
           </div>
 
           {/* Audit Results */}

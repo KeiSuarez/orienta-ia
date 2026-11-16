@@ -11,6 +11,7 @@ import { Requisito } from './Requisito';
 import type { CondicionLaboral, TipoEntidad, Beneficiario } from '../data/db/types';
 import { CONDICION_LABELS, BENEFICIARIO_LABELS, TIPO_ENTIDAD_LABELS, ENLACES_OFICIALES } from '../data/db/tramitesData';
 import type { ChecklistFinal, ChecklistItem } from '../types';
+import { descargarChecklistPDF } from '../utils/pdfGenerator';
 
 export class Checklist {
   private id: string;
@@ -82,9 +83,20 @@ export class Checklist {
     };
   }
 
-  /** Abre el diálogo de impresión del navegador, donde se puede guardar como PDF. */
+  /** Genera y descarga el archivo PDF auténtico del checklist. */
   exportarPDF(): void {
-    window.print();
+    try {
+      descargarChecklistPDF(this.mostrar());
+    } catch (e) {
+      console.warn('Error al exportar PDF:', e);
+      if (typeof window !== 'undefined' && window.print) {
+        try {
+          window.print();
+        } catch {
+          // ignore
+        }
+      }
+    }
   }
 
   getId(): string {
