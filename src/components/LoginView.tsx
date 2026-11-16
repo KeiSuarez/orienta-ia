@@ -9,10 +9,11 @@ import {
   Info,
 } from 'lucide-react';
 import { OfflineIndicator } from './OfflineIndicator';
+import { Administrador } from '../modelo';
 
 interface LoginViewProps {
-  /** Se llama con el token de sesión que devuelve el servidor. */
-  onLoginSuccess: (token: string, nombre: string) => void;
+  /** Se llama con el Administrador ya autenticado. */
+  onLoginSuccess: (administrador: Administrador) => void;
   /** Vuelve al asistente sin iniciar sesión. */
   onCancel: () => void;
 }
@@ -54,23 +55,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onCancel }
     }
 
     setIsLoading(true);
-    try {
-      const res = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pass }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.token) {
-        triggerError(data.error || 'Contraseña incorrecta, intentá otra vez.');
-        return;
-      }
-      onLoginSuccess(data.token, data.nombre || 'Administrador');
-    } catch {
-      triggerError('No se pudo conectar con el servidor. Probá de nuevo en unos segundos.');
-    } finally {
-      setIsLoading(false);
+    // Clase Administrador (src/modelo): valida la contraseña en el servidor.
+    const administrador = new Administrador();
+    const resultado = await administrador.iniciarSesion(pass);
+    setIsLoading(false);
+    if (!resultado.ok) {
+      triggerError(resultado.error || 'Contraseña incorrecta, intentá otra vez.');
+      return;
     }
+    onLoginSuccess(administrador);
   };
 
   return (

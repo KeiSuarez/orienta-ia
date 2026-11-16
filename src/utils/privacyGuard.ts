@@ -9,66 +9,55 @@ export interface PrivacyCheckResult {
   warningMessage: string;
 }
 
-// Regex patterns to detect personal and medical data
-const DNI_REGEX = /\b(dni|documento)?\s*:?\s*(\d{1,2}\.?\d{3}\.?\d{3}|\d{7,8})\b/i;
-const CUIL_CUIT_REGEX = /\b(cuil|cuit)?\s*:?\s*(20|23|24|27|30|33|34)[-\s]?\d{8}[-\s]?\d\b/i;
+// Patrones para detectar datos personales (nunca se repiten ni se guardan).
+const DNI_CON_PALABRA_REGEX = /\b(dni|d\.n\.i\.?|documento)\b[^\d]{0,20}\d[\d.\s-]{5,13}\d/i;
+const CUIL_CUIT_REGEX = /\b(20|23|24|27|30|33|34)[-\s.]?\d{8}[-\s.]?\d\b/;
 const EMAIL_REGEX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/;
 const PHONE_REGEX = /\b(\+?54\s?9?)?\s*(11|[2368]\d{2,3})[-\s]?\d{3,4}[-\s]?\d{4}\b/;
-const CLAVE_FISCAL_REGEX = /\b(clave\s+fiscal|clave\s+arca|clave\s+afip)\b/i;
+const NUMERO_LARGO_REGEX = /\b\d{1,3}(?:\.\d{3}){2,3}\b|\b\d{7,11}\b/;
+const CLAVE_FISCAL_REGEX = /\b(mi\s+)?clave\s+(fiscal|arca|afip)\s+(es|:)/i;
+const NOMBRE_REGEX = /\b(me llamo|mi nombre es)\s+\p{L}+/iu;
+// Para enmascarar: el primer nombre y hasta dos palabras más que empiecen con mayúscula.
+const NOMBRE_COMPLETO_REGEX = /\b(me llamo|mi nombre es)\s+\p{L}+(?:\s+\p{Lu}\p{L}*){0,2}/giu;
+const AFILIADO_REGEX = /\b(n(ro|°|º|umero)?\.?\s*(de\s+)?afiliad[oa])\s*:?\s*[\d/-]{4,}/i;
 
 /**
- * Checks if the user message contains sensitive personal or health data.
- * Crucial rule: Never repeat the data, never store it.
+ * Revisa si el mensaje trae datos personales.
+ * Regla: nunca se repiten ni se guardan.
  */
 export function checkPersonalData(input: string): PrivacyCheckResult {
-  const detectedTypes: string[] = [];
   const text = input.trim();
+  const tipos = new Set<string>();
 
-  // Check pure numbers or DNI patterns
-  if (DNI_REGEX.test(text) || (/^\d{7,8}$/.test(text.replace(/\./g, '')))) {
-    detectedTypes.push('DNI / Documento');
-  }
+  if (DNI_CON_PALABRA_REGEX.test(text)) tipos.add('DNI / Documento');
+  if (CUIL_CUIT_REGEX.test(text)) tipos.add('CUIL / CUIT');
+  if (EMAIL_REGEX.test(text)) tipos.add('Correo electrónico');
+  if (PHONE_REGEX.test(text) && text.replace(/\D/g, '').length >= 8) tipos.add('Teléfono');
+  if (NOMBRE_REGEX.test(text)) tipos.add('Nombre');
+  if (AFILIADO_REGEX.test(text)) tipos.add('Número de afiliado');
+  if (CLAVE_FISCAL_REGEX.test(text)) tipos.add('Clave Fiscal');
+  // Cualquier número largo (7 a 11 dígitos) puede ser un DNI o un teléfono.
+  if (tipos.size === 0 && NUMERO_LARGO_REGEX.test(text)) tipos.add('Número de documento o teléfono');
 
-  if (CUIL_CUIT_REGEX.test(text)) {
-    detectedTypes.push('CUIL / CUIT');
-  }
-
-  if (EMAIL_REGEX.test(text)) {
-    detectedTypes.push('Correo electrónico');
-  }
-
-  if (PHONE_REGEX.test(text) && text.replace(/\D/g, '').length >= 8) {
-    detectedTypes.push('Teléfono');
-  }
-
-  if (CLAVE_FISCAL_REGEX.test(text)) {
-    detectedTypes.push('Clave Fiscal');
-  }
-
-  if (detectedTypes.length > 0) {
+  if (tipos.size > 0) {
     return {
       hasPersonalData: true,
-      detectedTypes,
+      detectedTypes: [...tipos],
       warningMessage:
         'Para cuidar tu privacidad, recordá que no hace falta que compartas tu DNI, CUIL, nombre, teléfono ni datos médicos. En este asistente no guardamos ningún dato personal.'
     };
   }
 
-  return {
-    hasPersonalData: false,
-    detectedTypes: [],
-    warningMessage: ''
-  };
+  return { hasPersonalData: false, detectedTypes: [], warningMessage: '' };
 }
 
-/**
- * Sanitizes any personal data if logs or internal state are processed.
- * Masks digits and sensitive strings.
- */
+/** Enmascara los datos personales antes de procesar el texto. */
 export function sanitizeText(text: string): string {
   return text
-    .replace(EMAIL_REGEX, '[CORREO_PROTEGIDO]')
-    .replace(CUIL_CUIT_REGEX, '[CUIL_PROTEGIDO]')
-    .replace(DNI_REGEX, '[DNI_PROTEGIDO]')
-    .replace(/\b\d{7,8}\b/g, '[NUMERO_PROTEGIDO]');
+    .replace(new RegExp(EMAIL_REGEX.source, 'g'), '[CORREO_PROTEGIDO]')
+    .replace(new RegExp(CUIL_CUIT_REGEX.source, 'g'), '[CUIL_PROTEGIDO]')
+    .replace(NOMBRE_COMPLETO_REGEX, (_m, frase) => `${frase} [NOMBRE_PROTEGIDO]`)
+    .replace(new RegExp(AFILIADO_REGEX.source, 'gi'), '[AFILIADO_PROTEGIDO]')
+    .replace(new RegExp(PHONE_REGEX.source, 'g'), (m) => (m.replace(/\D/g, '').length >= 8 ? ' [TELEFONO_PROTEGIDO]' : m))
+    .replace(/\b\d{1,3}(?:\.\d{3}){2,3}\b|\b\d{7,11}\b/g, '[NUMERO_PROTEGIDO]');
 }

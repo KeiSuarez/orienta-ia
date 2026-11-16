@@ -27,6 +27,7 @@ import {
 } from '../../data/db/types';
 import {
   loadAllConsultas,
+  getSessionConsultas,
   computeDashboardMetrics,
   exportAggregatedDashboardCsv,
   TableroFiltros,
@@ -116,7 +117,7 @@ export const PanelOrganismo: React.FC = () => {
               Datos simulados · anónimos y agregados · entidades con nombres ficticios
             </h2>
             <p className="text-xs text-gray-300 mt-1 max-w-3xl leading-relaxed">
-              Monitoreo analítico basado en 2.000 consultas simuladas de referencia más los eventos numéricos anónimos registrados en esta sesión de navegación.
+              Monitoreo analítico basado en 2.000 consultas simuladas de referencia más las consultas anónimas registradas en este navegador.
             </p>
           </div>
 
@@ -249,7 +250,7 @@ export const PanelOrganismo: React.FC = () => {
             {metricas.totalConsultas.toLocaleString('es-AR')}
           </div>
           <span className="text-[11px] text-[#2B82C9] font-semibold mt-1 block">
-            {allEvents.length - 2000 > 0 ? `+${allEvents.length - 2000} nuevas en esta sesión` : '2.000 simuladas'}
+            {getSessionConsultas().length > 0 ? `${allEvents.length - getSessionConsultas().length} simuladas + ${getSessionConsultas().length} registradas en este navegador` : `${allEvents.length} simuladas`}
           </span>
         </div>
 

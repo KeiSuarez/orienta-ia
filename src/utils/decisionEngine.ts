@@ -21,6 +21,8 @@ export interface DecisionState {
   condicion?: CondicionLaboral;
   beneficiario?: Beneficiario;
   disambiguationContext?: 'edad_vs_negativa' | 'unificacion_vs_jubilado' | 'opcion_vs_finalizacion' | 'general';
+  /** Cuántas veces seguidas no se pudo identificar el trámite con un mensaje concreto. */
+  intentosSinClasificar?: number;
 }
 
 export interface DecisionResponse {
@@ -154,7 +156,7 @@ export function evaluateUserMessage(userInput: string, currentState: DecisionSta
     }
 
     if (currentState.disambiguationContext === 'unificacion_vs_jubilado') {
-      if (norm.includes('jubilad') || norm.includes('pension') || norm.includes('si')) {
+      if (norm.includes('jubilad') || norm.includes('si')) {
         const state: DecisionState = { ...currentState, step: 'ask_condicion', tramiteId: 'unificacion_jubilados' };
         return promptMissingData(state);
       } else {
@@ -189,7 +191,7 @@ export function evaluateUserMessage(userInput: string, currentState: DecisionSta
     if (norm.includes('monotributo social')) cond = 'monotributo_social';
     else if (norm.includes('monotribut')) cond = 'monotributista';
     else if (norm.includes('servicio domestico') || norm.includes('empleada domestica') || norm.includes('casas particulares')) cond = 'servicio_domestico';
-    else if (norm.includes('jubilad') || norm.includes('pensionad')) cond = 'jubilado_pensionado';
+    else if (norm.includes('jubilad')) cond = 'jubilado_pensionado';
     else if (norm.includes('desempleo')) cond = 'seguro_desempleo';
     else if (norm.includes('adherente')) cond = 'prepaga_adherente';
     else if (norm.includes('dependencia') || norm.includes('sueldo') || norm.includes('empleado')) cond = 'relacion_dependencia';
@@ -234,7 +236,7 @@ export function evaluateUserMessage(userInput: string, currentState: DecisionSta
   // Case: "Mi esposo está jubilado y queremos unificar aportes" / "Soy jubilado y mi esposa trabaja..."
   if (
     (norm.includes('unificar') || norm.includes('juntar') || norm.includes('unir')) &&
-    (norm.includes('jubilad') || norm.includes('pension'))
+    norm.includes('jubilad')
   ) {
     const state: DecisionState = {
       step: 'ask_condicion',
@@ -259,6 +261,23 @@ export function evaluateUserMessage(userInput: string, currentState: DecisionSta
     norm.includes('tratamiento') ||
     norm.includes('prestacion') ||
     norm.includes('internacion') ||
+    norm.includes('silla de ruedas') ||
+    norm.includes('andador') ||
+    norm.includes('oxigeno') ||
+    norm.includes('panales') ||
+    norm.includes('cama ortopedica') ||
+    norm.includes('medicacion') ||
+    norm.includes('no se la dan') ||
+    norm.includes('no se lo dan') ||
+    norm.includes('no le dan') ||
+    norm.includes('protesis') ||
+    norm.includes('ortesis') ||
+    norm.includes('audifono') ||
+    norm.includes('anteojos') ||
+    norm.includes('insumo') ||
+    norm.includes('kinesiolog') ||
+    norm.includes('rehabilitacion') ||
+    norm.includes('turno') ||
     (norm.includes('no') && norm.includes('cubre'))
   ) {
     // If mentions CUD or discapacidad, route to discapacidad
@@ -296,7 +315,7 @@ export function evaluateUserMessage(userInput: string, currentState: DecisionSta
       tramiteId: 'opcion_cambio'
     };
     if (norm.includes('monotribut')) state.condicion = 'monotributista';
-    if (norm.includes('jubilad') || norm.includes('pensionad')) state.condicion = 'jubilado_pensionado';
+    if (norm.includes('jubilad')) state.condicion = 'jubilado_pensionado';
     return promptMissingData(state);
   }
 
@@ -368,9 +387,9 @@ export function evaluateUserMessage(userInput: string, currentState: DecisionSta
   // Case: Unificación de aportes general
   if (norm.includes('unific') || norm.includes('juntar aportes') || norm.includes('unir aportes')) {
     return {
-      text: 'Para saber qué unificación te corresponde, decime:\n¿Alguno de los dos es jubilado/a o pensionado/a?',
+      text: 'Para saber qué unificación te corresponde, decime:\n¿Alguno de los dos es jubilado/a?',
       quickReplies: [
-        { label: 'Sí, uno es jubilado/a o pensionado/a', value: 'Uno está jubilado', type: 'desambiguacion' },
+        { label: 'Sí, uno es jubilado/a', value: 'Uno está jubilado', type: 'desambiguacion' },
         { label: 'No, ambos somos trabajadores activos', value: 'Ambos activos', type: 'desambiguacion' }
       ],
       nextState: {
@@ -457,7 +476,7 @@ export function promptMissingData(state: DecisionState): DecisionResponse {
         { label: 'Monotributo', value: 'Monotributo', type: 'condicion' },
         { label: 'Monotributo social', value: 'Monotributo social', type: 'condicion' },
         { label: 'Servicio doméstico', value: 'Servicio doméstico', type: 'condicion' },
-        { label: 'Jubilado/a o pensionado/a', value: 'Jubilado/a o pensionado/a', type: 'condicion' },
+        { label: 'Jubilado/a', value: 'Jubilado/a', type: 'condicion' },
         { label: 'Seguro de desempleo', value: 'Seguro de desempleo', type: 'condicion' },
         { label: 'Adherente de prepaga', value: 'Adherente de prepaga', type: 'condicion' }
       ],
@@ -521,7 +540,7 @@ export function generateFinalAnswer(state: DecisionState): DecisionResponse {
   const pasos: string[] = [];
   if (tramite.id === 'opcion_cambio') {
     if (condicion === 'jubilado_pensionado') {
-      pasos.push('Los jubilados y pensionados realizan la opción de cambio directamente ante ANSES (con turno previo o web oficial de ANSES).');
+      pasos.push('Los jubilados realizan la opción de cambio directamente ante ANSES (con turno previo o web oficial de ANSES).');
       pasos.push('Reuní tu último recibo de haberes y DNI.');
     } else {
       pasos.push('Ingresá al portal de ARCA con tu Clave Fiscal nivel 3 y confirmá que tengas adherido el servicio interactivo "Mi SSSalud" desde el Administrador de Relaciones.');
@@ -566,7 +585,7 @@ export function generateFinalAnswer(state: DecisionState): DecisionResponse {
   if (tramite.id === 'opcion_cambio') {
     summaryText += `\n\n📌 **Canal oficial:** Recordá que la opción de cambio es **solo online**, desde **Mi SSSalud**, con **Clave Fiscal nivel 3** y el servicio 'Mi SSSalud' adherido en ARCA. Se realiza una vez al año y debe confirmarse por mail dentro de las 48 horas.`;
     if (condicion === 'jubilado_pensionado') {
-      summaryText += ` Como indicaste que intervenís como jubilado/a o pensionado/a, el cambio se gestiona ante **ANSES**.`;
+      summaryText += ` Como indicaste que sos jubilado/a, el cambio se gestiona ante **ANSES**.`;
     }
   } else if (tramite.id === 'cobertura_prestacional') {
     summaryText += `\n\n📌 **Canal oficial:** Se presenta a través de **TAD (Trámites a Distancia), trámite 2723**.`;
@@ -640,7 +659,7 @@ export function detectarCondicion(texto: string): CondicionLaboral | null {
   if (norm.includes('monotributo social')) return 'monotributo_social';
   if (norm.includes('monotribut')) return 'monotributista';
   if (norm.includes('servicio domestico') || norm.includes('empleada domestica') || norm.includes('casas particulares')) return 'servicio_domestico';
-  if (norm.includes('jubilad') || norm.includes('pensionad')) return 'jubilado_pensionado';
+  if (norm.includes('jubilad')) return 'jubilado_pensionado';
   if (norm.includes('desempleo')) return 'seguro_desempleo';
   if (norm.includes('adherente')) return 'prepaga_adherente';
   if (norm.includes('dependencia') || norm.includes('sueldo') || norm.includes('empleado') || norm.includes('en blanco')) return 'relacion_dependencia';

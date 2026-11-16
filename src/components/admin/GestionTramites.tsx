@@ -4,11 +4,11 @@ import { Tramite, CondicionLaboral } from '../../data/db/types';
 import {
   TRAMITES_DATA,
   CONDICION_LABELS,
-  saveTramitesOverride,
   resetTramitesOverride,
   exportTramitesJson,
   hasAdminOverride
 } from '../../data/db/tramitesData';
+import { Administrador } from '../../modelo';
 
 const TIPOS = [
   { value: 'denuncia', label: 'Denuncia' },
@@ -42,28 +42,11 @@ function slug(texto: string): string {
     .slice(0, 40);
 }
 
-function tramiteVacio(): Tramite {
-  return {
-    id: `nuevo_tramite_${Date.now().toString().slice(-5)}`,
-    nombre: 'Nuevo trámite',
-    tipo: 'tramite',
-    macro_categoria: '',
-    en_mvp: true,
-    descripcion: '',
-    ejemplos_usuario: [],
-    datos_a_preguntar: ['situacion'],
-    requisitos: { comunes: [], por_situacion: {} },
-    canal: { virtual: '', presencial: 'Con turno previo (turnos SSSalud en Mi Argentina)', seguimiento: 'CAV / TAD' },
-    notas: '',
-    fuente: ''
-  };
-}
-
 const inputCls =
   'w-full rounded-[10px] border border-[#E2E8F0] bg-[#F8FAFD] px-3 py-2 text-sm text-[#0F172A] focus:outline-none focus:border-[#2B82C9] focus:ring-1 focus:ring-[#2B82C9]';
 const labelCls = 'block text-xs font-bold text-[#0B192C] mb-1';
 
-export const GestionTramites: React.FC = () => {
+export const GestionTramites: React.FC<{ administrador: Administrador }> = ({ administrador }) => {
   const [lista, setLista] = useState<Tramite[]>(() => JSON.parse(JSON.stringify(TRAMITES_DATA)));
   const [seleccionado, setSeleccionado] = useState<string>(lista[0]?.id ?? '');
   const [sinGuardar, setSinGuardar] = useState(false);
@@ -80,6 +63,19 @@ export const GestionTramites: React.FC = () => {
   const actualizar = (cambios: Partial<Tramite>) => {
     if (!actual) return;
     setLista((prev) => prev.map((t) => (t.id === actual.id ? { ...t, ...cambios } : t)));
+    setSinGuardar(true);
+  };
+
+  /** Requisitos y canales se actualizan con los métodos de la clase Administrador. */
+  const cambiarRequisitos = (requisitos: Tramite['requisitos']) => {
+    if (!actual) return;
+    setLista((prev) => administrador.actualizarRequisitos(prev, actual.id, requisitos));
+    setSinGuardar(true);
+  };
+
+  const cambiarCanal = (canal: Tramite['canal']) => {
+    if (!actual) return;
+    setLista((prev) => administrador.actualizarCanal(prev, actual.id, canal));
     setSinGuardar(true);
   };
 
@@ -100,14 +96,14 @@ export const GestionTramites: React.FC = () => {
   };
 
   const guardar = () => {
-    saveTramitesOverride(lista);
+    administrador.guardarTramites(lista);
     setSinGuardar(false);
     setConEdiciones(true);
     avisar('Cambios guardados en este navegador. El asistente ya usa la versión editada.');
   };
 
   const agregar = () => {
-    const nuevo = tramiteVacio();
+    const nuevo = administrador.crearTramite();
     setLista((prev) => [...prev, nuevo]);
     setSeleccionado(nuevo.id);
     setSinGuardar(true);
@@ -269,7 +265,7 @@ export const GestionTramites: React.FC = () => {
                 className={inputCls}
                 rows={6}
                 value={aLineas(actual.requisitos.comunes)}
-                onChange={(e) => actualizar({ requisitos: { ...actual.requisitos, comunes: deLineas(e.target.value) } })}
+                onChange={(e) => cambiarRequisitos({ ...actual.requisitos, comunes: deLineas(e.target.value) })}
               />
             </div>
 
@@ -288,7 +284,7 @@ export const GestionTramites: React.FC = () => {
                         const por = { ...actual.requisitos.por_situacion };
                         if (lineas.length) por[c] = lineas;
                         else delete por[c];
-                        actualizar({ requisitos: { ...actual.requisitos, por_situacion: por } });
+                        cambiarRequisitos({ ...actual.requisitos, por_situacion: por });
                       }}
                     />
                   </div>
@@ -299,15 +295,15 @@ export const GestionTramites: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className={labelCls}>Canal virtual</label>
-                <textarea className={inputCls} rows={2} value={actual.canal.virtual} onChange={(e) => actualizar({ canal: { ...actual.canal, virtual: e.target.value } })} />
+                <textarea className={inputCls} rows={2} value={actual.canal.virtual} onChange={(e) => cambiarCanal({ ...actual.canal, virtual: e.target.value })} />
               </div>
               <div>
                 <label className={labelCls}>Canal presencial</label>
-                <textarea className={inputCls} rows={2} value={actual.canal.presencial} onChange={(e) => actualizar({ canal: { ...actual.canal, presencial: e.target.value } })} />
+                <textarea className={inputCls} rows={2} value={actual.canal.presencial} onChange={(e) => cambiarCanal({ ...actual.canal, presencial: e.target.value })} />
               </div>
               <div>
                 <label className={labelCls}>Seguimiento</label>
-                <textarea className={inputCls} rows={2} value={actual.canal.seguimiento} onChange={(e) => actualizar({ canal: { ...actual.canal, seguimiento: e.target.value } })} />
+                <textarea className={inputCls} rows={2} value={actual.canal.seguimiento} onChange={(e) => cambiarCanal({ ...actual.canal, seguimiento: e.target.value })} />
               </div>
             </div>
 

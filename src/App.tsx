@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { SplashScreen } from './components/SplashScreen';
 import { LoginView } from './components/LoginView';
 import { Header, TabCiudadano, TabAdmin } from './components/Header';
@@ -18,10 +18,9 @@ import { PanelOrganismo } from './components/admin/PanelOrganismo';
 import { RedactorNota } from './components/ciudadano/RedactorNota';
 import { GestionTramites } from './components/admin/GestionTramites';
 import { ConsultasRegistradas } from './components/admin/ConsultasRegistradas';
-import { DatosMinimos, ChecklistFinal, DATOS_VACIOS } from './types';
-import { resultadoDesdeDatos } from './services/orientaEngine';
-import { payloadAChecklist } from './data/db/checklistAdapter';
+import { DatosMinimos, DATOS_VACIOS } from './types';
 import { getTramiteById } from './data/db/tramitesData';
+import { Administrador, AsistenteIA, Checklist, Ciudadano, Consulta } from './modelo';
 
 const TOKEN_KEY = 'orienta_admin_token';
 const NOMBRE_KEY = 'orienta_admin_nombre';
@@ -39,72 +38,72 @@ export default function App() {
 
   // El ciudadano usa el asistente sin iniciar sesión. Solo el administrador se loguea.
   const [modo, setModo] = useState<'ciudadano' | 'login' | 'admin'>('ciudadano');
-  const [adminToken, setAdminToken] = useState<string | null>(null);
-  const [adminNombre, setAdminNombre] = useState<string | null>(null);
+  const [administrador, setAdministrador] = useState<Administrador | null>(null);
+
+  // Objetos del modelo (ver src/modelo).
+  const ciudadano = useRef<Ciudadano>(new Ciudadano()).current!;
+  const asistente = useRef<AsistenteIA>(new AsistenteIA()).current!;
 
   const [tabCiudadano, setTabCiudadano] = useState<TabCiudadano>('chat');
   const [tabAdmin, setTabAdmin] = useState<TabAdmin>('panel');
 
   const [datos, setDatos] = useState<DatosMinimos>(DATOS_VACIOS);
-  const [checklist, setChecklist] = useState<ChecklistFinal | null>(null);
+  const [checklist, setChecklist] = useState<Checklist | null>(null);
 
   // Si el administrador recarga la página, se valida su sesión con el servidor.
   useEffect(() => {
     const token = leerSesion(TOKEN_KEY);
     if (!token) return;
-    fetch('/api/admin/verificar', { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => {
-        if (r.ok) {
-          setAdminToken(token);
-          setAdminNombre(leerSesion(NOMBRE_KEY));
-        } else {
-          sessionStorage.removeItem(TOKEN_KEY);
-        }
-      })
-      .catch(() => undefined);
+    const admin = new Administrador(token, leerSesion(NOMBRE_KEY) ?? undefined);
+    admin.verificarSesion().then((valida) => {
+      if (valida) setAdministrador(admin);
+      else sessionStorage.removeItem(TOKEN_KEY);
+    });
   }, []);
 
-  const irAdmin = () => setModo(adminToken ? 'admin' : 'login');
+  const irAdmin = () => setModo(administrador ? 'admin' : 'login');
 
-  const handleLoginSuccess = (token: string, nombre: string) => {
+  const handleLoginSuccess = (admin: Administrador) => {
     try {
-      sessionStorage.setItem(TOKEN_KEY, token);
-      sessionStorage.setItem(NOMBRE_KEY, nombre);
+      sessionStorage.setItem(TOKEN_KEY, admin.getToken() ?? '');
+      sessionStorage.setItem(NOMBRE_KEY, admin.getNombre());
     } catch {
       // ignorar
     }
-    setAdminToken(token);
-    setAdminNombre(nombre);
+    setAdministrador(admin);
     setModo('admin');
   };
 
   const handleLogout = () => {
-    if (adminToken) {
-      fetch('/api/admin/logout', { method: 'POST', headers: { Authorization: `Bearer ${adminToken}` } }).catch(() => undefined);
-    }
+    administrador?.cerrarSesion();
     try {
       sessionStorage.removeItem(TOKEN_KEY);
       sessionStorage.removeItem(NOMBRE_KEY);
     } catch {
       // ignorar
     }
-    setAdminToken(null);
-    setAdminNombre(null);
+    setAdministrador(null);
     setModo('ciudadano');
   };
 
-  /** Cambios hechos a mano en la barra de datos mínimos: si están completos, se arma el checklist. */
+  /**
+   * Cambios hechos a mano en la barra de datos mínimos: se arma una Consulta con
+   * esos datos y, si el asistente no detecta datos faltantes, genera el checklist.
+   */
   const handleDatosManual = (nuevos: DatosMinimos) => {
     setDatos(nuevos);
-    if (nuevos.tramiteId && nuevos.condicion && nuevos.beneficiario) {
-      const res = resultadoDesdeDatos({
-        step: 'complete',
-        tramiteId: nuevos.tramiteId,
-        tipoEntidad: nuevos.tipoEntidad ?? undefined,
-        condicion: nuevos.condicion,
-        beneficiario: nuevos.beneficiario,
-      });
-      if (res.tramiteResult) setChecklist(payloadAChecklist(res.tramiteResult));
+    if (!nuevos.tramiteId) return;
+    const consulta = new Consulta(ciudadano.getIdSesion());
+    consulta.actualizarEstado({
+      step: 'complete',
+      tramiteId: nuevos.tramiteId,
+      tipoEntidad: nuevos.tipoEntidad ?? undefined,
+      condicion: nuevos.condicion ?? undefined,
+      beneficiario: nuevos.beneficiario ?? undefined,
+    });
+    if (asistente.identificarFaltantes(consulta).length === 0) {
+      const nuevo = asistente.generarChecklist(consulta);
+      if (nuevo) setChecklist(nuevo);
     }
   };
 
@@ -116,7 +115,7 @@ export default function App() {
     return <LoginView onLoginSuccess={handleLoginSuccess} onCancel={() => setModo('ciudadano')} />;
   }
 
-  const enAdmin = modo === 'admin' && adminToken;
+  const enAdmin = modo === 'admin' && administrador !== null;
 
   return (
     <div className="min-h-screen bg-[#F4F7FB] text-[#0F172A] flex flex-col font-sans relative antialiased overflow-x-hidden w-full">
@@ -127,7 +126,7 @@ export default function App() {
         tabAdmin={tabAdmin}
         onTabAdmin={setTabAdmin}
         hasChecklist={checklist !== null}
-        adminNombre={adminNombre}
+        adminNombre={administrador?.getNombre() ?? null}
         onIrAdmin={irAdmin}
         onLogout={handleLogout}
       />
@@ -135,8 +134,10 @@ export default function App() {
       {enAdmin ? (
         <main className="flex-1 py-1.5 sm:py-4 px-1 xs:px-2 sm:px-4 w-full max-w-7xl mx-auto">
           {tabAdmin === 'panel' && <PanelOrganismo />}
-          {tabAdmin === 'consultas' && <ConsultasRegistradas token={adminToken} onSesionVencida={handleLogout} />}
-          {tabAdmin === 'tramites' && <GestionTramites />}
+          {tabAdmin === 'consultas' && administrador && (
+            <ConsultasRegistradas administrador={administrador} onSesionVencida={handleLogout} />
+          )}
+          {tabAdmin === 'tramites' && administrador && <GestionTramites administrador={administrador} />}
         </main>
       ) : (
         <>
@@ -154,6 +155,7 @@ export default function App() {
             {/* El chat queda montado para no perder la conversación al cambiar de pestaña */}
             <div className={tabCiudadano === 'chat' ? 'contents' : 'hidden'}>
               <ChatInterface
+                ciudadano={ciudadano}
                 onUpdateDatos={setDatos}
                 onChecklistGenerado={setChecklist}
                 onVerChecklist={() => setTabCiudadano('checklist')}
@@ -163,7 +165,11 @@ export default function App() {
             </div>
 
             {tabCiudadano === 'checklist' && (
-              <ChecklistView checklist={checklist} onCrearNuevo={() => setTabCiudadano('chat')} />
+              <ChecklistView
+                checklist={checklist ? checklist.mostrar() : null}
+                onCrearNuevo={() => setTabCiudadano('chat')}
+                onImprimir={() => checklist && ciudadano.descargarChecklist(checklist)}
+              />
             )}
 
             {tabCiudadano === 'redactor' && (

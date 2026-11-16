@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Send,
   Sparkles,
@@ -13,16 +13,16 @@ import {
 } from 'lucide-react';
 import { ChatMessage, ChecklistFinal, DatosMinimos, DATOS_VACIOS } from '../types';
 import { QuickReply } from '../data/db/types';
-import { DecisionState, DecisionResponse } from '../utils/decisionEngine';
-import { procesarMensaje } from '../services/orientaEngine';
-import { payloadAChecklist } from '../data/db/checklistAdapter';
 import { logAnonymousConsultation } from '../data/db/simulatedData';
-import { CONDICION_LABELS, TIPO_ENTIDAD_LABELS, ENLACES_OFICIALES } from '../data/db/tramitesData';
+import { ENLACES_OFICIALES, TRAMITES_DATA } from '../data/db/tramitesData';
+import { AsistenteIA, Ciudadano, Checklist, Consulta, RespuestaAsistente } from '../modelo';
 import { OrientaLogo } from './OrientaLogo';
 
 interface ChatInterfaceProps {
+  /** La persona anónima que usa el asistente (clase Ciudadano). */
+  ciudadano: Ciudadano;
   onUpdateDatos: (nuevosDatos: DatosMinimos) => void;
-  onChecklistGenerado: (checklist: ChecklistFinal) => void;
+  onChecklistGenerado: (checklist: Checklist) => void;
   onVerChecklist: () => void;
   onAbrirRedactor: () => void;
   onAbrirAuditor: () => void;
@@ -41,6 +41,55 @@ Mi objetivo es que llegues con la documentación completa y no pierdas tiempo. N
 
 Contame con tus palabras: **¿qué te pasó con tu obra social o prepaga?**`;
 
+/**
+ * Palabras extra para reconocer cada trámite mientras la persona escribe
+ * (se suman al nombre, la categoría y los ejemplos de tramites.json).
+ */
+const PALABRAS_SUGERENCIA: Record<string, string[]> = {
+  negativa_afiliacion: ['afilia', 'rechaz', 'no me toman', 'no me aceptan', 'alta', 'sumar', 'incorporar'],
+  cobertura_prestacional: ['cobertura', 'estudio', 'resonancia', 'medicamento', 'remedio', 'cirugia', 'receta', 'autoriz', 'practica', 'tratamiento', 'silla', 'protesis', 'internacion'],
+  discapacidad: ['discapacidad', 'cud', 'terapia', 'acompanante', 'integradora', 'rehabilitacion'],
+  aumento_edad: ['aumento', 'edad', 'cuota', 'etario', 'subieron', 'mas cara'],
+  ive: ['ive', 'interrupcion', 'aborto'],
+  unificacion_aportes: ['unificar', 'juntar', 'unir', 'aportes', 'pareja', 'conyuge'],
+  desunificacion_aportes: ['desunific', 'separar', 'divorcio', 'separacion'],
+  unificacion_jubilados: ['jubilad', 'unificar'],
+  correccion_padron: ['padron', 'nuevo empleador', 'trabajo anterior', 'cambie de trabajo'],
+  finalizacion_opcion: ['finalizar opcion', 'cerrar opcion', 'gerente', 'provincial'],
+  opcion_cambio: ['cambio', 'cambiar', 'cambiarme', 'pasarme', 'otra obra social', 'opcion', 'traspaso']
+};
+
+const normalizar = (t: string) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+/** Busca hasta 4 trámites de la base que coincidan con lo que la persona está escribiendo. */
+function buscarSugerencias(texto: string): { id: string; nombre: string }[] {
+  const consulta = normalizar(texto.trim());
+  if (consulta.length < 3) return [];
+  const palabras = consulta.split(/\s+/).filter((p) => p.length >= 3);
+
+  return TRAMITES_DATA.filter((t) => t.en_mvp !== false)
+    .map((t) => {
+      const nombre = normalizar(t.nombre);
+      const categoria = normalizar(t.macro_categoria);
+      const ejemplos = t.ejemplos_usuario.map(normalizar);
+      const extra = PALABRAS_SUGERENCIA[t.id] ?? [];
+      let puntaje = 0;
+      if (nombre.includes(consulta) || categoria.includes(consulta)) puntaje += 5;
+      if (ejemplos.some((e) => e.includes(consulta))) puntaje += 4;
+      const palabrasTramite = `${nombre} ${categoria}`.split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
+      for (const p of palabras) {
+        if (palabrasTramite.some((w) => w.startsWith(p) || (w.length >= 4 && p.startsWith(w)))) puntaje += 2;
+        if (extra.some((k) => p.startsWith(k) || k.startsWith(p) || consulta.includes(k))) puntaje += 2;
+        if (ejemplos.some((e) => e.includes(p))) puntaje += 1;
+      }
+      return { id: t.id, nombre: t.nombre, puntaje };
+    })
+    .filter((s) => s.puntaje >= 2)
+    .sort((a, b) => b.puntaje - a.puntaje)
+    .slice(0, 4)
+    .map(({ id, nombre }) => ({ id, nombre }));
+}
+
 const hora = () => new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 
 function escapeHtml(texto: string): string {
@@ -57,6 +106,7 @@ function filtrarRespuestasCiudadano(replies?: QuickReply[]): QuickReply[] | unde
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
+  ciudadano,
   onUpdateDatos,
   onChecklistGenerado,
   onVerChecklist,
@@ -72,9 +122,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       quickReplies: CASOS_FRECUENTES,
     },
   ]);
-  const [estado, setEstado] = useState<DecisionState>({ step: 'init' });
+  // El asistente (clase AsistenteIA, ver src/modelo).
+  const asistenteRef = useRef<AsistenteIA>(new AsistenteIA());
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  // Paso actual de la conversación: las sugerencias solo se muestran cuando no se está esperando un dato puntual.
+  const [pasoActual, setPasoActual] = useState<string>('init');
+  const sugerencias = useMemo(
+    () => (['ask_entidad', 'ask_condicion', 'ask_beneficiario'].includes(pasoActual) ? [] : buscarSugerencias(inputText)),
+    [inputText, pasoActual]
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const feedRef = useRef<HTMLDivElement>(null);
 
@@ -85,9 +142,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }, [messages, isTyping]);
 
   /** Aplica una respuesta del motor: actualiza estado, datos mínimos, checklist y registro anónimo. */
-  const aplicarRespuesta = (res: DecisionResponse & { avisoPrivacidad?: string; fuente?: 'reglas' | 'ia' }) => {
-    const next = res.nextState;
-    setEstado(next);
+  const aplicarRespuesta = (consulta: Consulta, res: RespuestaAsistente) => {
+    const next = consulta.getEstado();
+    setPasoActual(next.step);
+    ciudadano.actualizarDatos(consulta);
     onUpdateDatos({
       tramiteId: next.tramiteId ?? null,
       tipoEntidad: next.tipoEntidad ?? null,
@@ -96,18 +154,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     });
 
     let checklist: ChecklistFinal | undefined;
-    if (res.tramiteResult) {
-      checklist = payloadAChecklist(res.tramiteResult);
-      onChecklistGenerado(checklist);
+    if (res.checklist) {
+      checklist = res.checklist.mostrar();
+      onChecklistGenerado(res.checklist);
     }
 
+    // Registro anónimo de la consulta (sin texto ni datos personales).
     if (res.loggedOutcome) {
-      logAnonymousConsultation({
-        tramite_detectado: res.loggedTramiteId || '(sin clasificar)',
-        resultado: res.loggedOutcome,
-        condicion: next.condicion ? CONDICION_LABELS[next.condicion] : undefined,
-        tipo_entidad: next.tipoEntidad ? TIPO_ENTIDAD_LABELS[next.tipoEntidad] : undefined,
-      });
+      logAnonymousConsultation(consulta.aRegistroAnonimo(res.loggedOutcome, res.loggedTramiteId));
     }
 
     setMessages((prev) => [
@@ -137,8 +191,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setIsTyping(true);
 
     try {
-      const res = await procesarMensaje(texto, estado);
-      aplicarRespuesta(res);
+      const consulta = ciudadano.ingresarConsulta(texto);
+      const res = await asistenteRef.current!.interpretarConsulta(consulta, texto);
+      aplicarRespuesta(consulta, res);
     } catch (err) {
       console.error(err);
       setMessages((prev) => [
@@ -155,8 +210,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
+  /** Elegir una sugerencia inicia directamente la consulta guiada de ese trámite. */
+  const elegirSugerencia = (id: string, nombre: string) => {
+    handleSend(`tramite:${id}`, `Quiero consultar sobre: ${nombre}`);
+  };
+
   const reiniciarConversacion = () => {
-    setEstado({ step: 'init' });
+    setPasoActual('init');
+    ciudadano.nuevaConsulta();
     onUpdateDatos(DATOS_VACIOS);
     setMessages([
       {
@@ -477,6 +538,31 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Sugerencias de trámites mientras la persona escribe (autocompletado) */}
+      {sugerencias.length > 0 && !isTyping && (
+        <div className="mt-2.5 bg-white border border-[#CBDCEB] rounded-2xl p-2.5 shadow-xs" role="listbox" aria-label="Sugerencias de trámites">
+          <div className="flex items-center gap-1.5 px-1 mb-1.5 text-[11px] font-bold text-[#475569] uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5 text-[#E5B842]" />
+            <span>¿Tu consulta es sobre alguno de estos trámites?</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {sugerencias.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                role="option"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => elegirSugerencia(s.id, s.nombre)}
+                className="min-h-[38px] px-3 py-1.5 rounded-[9px] bg-[#F4F8FC] hover:bg-[#EAF3FA] text-[#0B192C] text-xs font-semibold border border-[#E2E8F0] hover:border-[#2B82C9] transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+              >
+                <span>{s.nombre}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#2B82C9] shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input bar: 44px min-height targets and 16px mobile font to prevent auto-zoom */}
       <div className="mt-2.5 sm:mt-3 bg-white p-1.5 sm:p-2.5 rounded-2xl border border-[#E2E8F0] shadow-xs">
         <form
@@ -500,7 +586,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Escribí tu consulta..."
+            placeholder="Escribí tu consulta (por ejemplo: no me cubren un medicamento)..."
+            aria-autocomplete="list"
             className="flex-1 text-base sm:text-sm text-[#0F172A] placeholder-[#94A3B8] px-2.5 sm:px-3 py-2 bg-transparent focus:outline-none min-h-[44px]"
             disabled={isTyping}
           />

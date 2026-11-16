@@ -18,11 +18,14 @@ import { ChecklistFinal, ChecklistItem } from '../types';
 interface ChecklistViewProps {
   checklist: ChecklistFinal | null;
   onCrearNuevo: () => void;
+  /** Imprimir o guardar en PDF (Ciudadano.descargarChecklist). */
+  onImprimir?: () => void;
 }
 
 export const ChecklistView: React.FC<ChecklistViewProps> = ({
   checklist,
   onCrearNuevo,
+  onImprimir,
 }) => {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [copiado, setCopiado] = useState(false);
@@ -90,7 +93,8 @@ Orientación no vinculante generada por Orienta IA (proyecto académico IFTS 12)
   };
 
   const imprimir = () => {
-    window.print();
+    if (onImprimir) onImprimir();
+    else window.print();
   };
 
   const renderItemSection = (

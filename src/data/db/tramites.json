@@ -329,7 +329,7 @@
     },
     {
       "id": "unificacion_jubilados",
-      "nombre": "Unificación de aportes de jubilados/pensionados",
+      "nombre": "Unificación de aportes de jubilados",
       "tipo": "tramite",
       "macro_categoria": "Aportes",
       "en_mvp": true,
@@ -469,7 +469,7 @@
         }
       },
       "canal": {
-        "virtual": "Solo online, desde Mi SSSalud (sitio de la SSSalud), con Clave Fiscal nivel 3 y el servicio 'Mi SSSalud' adherido en ARCA. Jubilados y pensionados: ante ANSES.",
+        "virtual": "Solo online, desde Mi SSSalud (sitio de la SSSalud), con Clave Fiscal nivel 3 y el servicio 'Mi SSSalud' adherido en ARCA. Jubilados: ante ANSES.",
         "presencial": "No (solo online)",
         "seguimiento": "CAV / TINA / TAD"
       },

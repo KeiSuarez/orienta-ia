@@ -15,7 +15,7 @@ export const CONDICION_LABELS: Record<CondicionLaboral, string> = {
   monotributista: 'Monotributo',
   monotributo_social: 'Monotributo social',
   servicio_domestico: 'Servicio doméstico',
-  jubilado_pensionado: 'Jubilado/a o pensionado/a',
+  jubilado_pensionado: 'Jubilado/a', // la clave se mantiene por compatibilidad; las pensiones no las regula la SSSalud
   seguro_desempleo: 'Seguro de desempleo',
   prepaga_adherente: 'Adherente directo de prepaga',
   prepaga_via_agente_seguro: 'Prepaga desregulada (vía Agente del Seguro)',
@@ -40,7 +40,7 @@ export const BENEFICIARIO_LABELS: Record<Beneficiario, string> = {
 export const ENLACES_OFICIALES = {
   tad: 'https://tramitesadistancia.gob.ar',
   miArgentinaTurnos: 'https://mi.argentina.gob.ar/turnos',
-  cav: 'https://cav.sssalud.gob.ar',
+  cav: 'https://www.argentina.gob.ar/sssalud/centro-de-atencion-virtual',
   miSssalud: 'https://www.sssalud.gob.ar',
   monotributoAgentes: 'https://www.argentina.gob.ar/sssalud/monotributo/agentes-de-salud',
   arca: 'https://www.arca.gob.ar'

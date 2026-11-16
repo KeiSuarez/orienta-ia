@@ -1,6 +1,6 @@
 {
-  "name": "Remix Remix Orienta IA - Asistente Virtual SSSalud",
-  "description": "Orienta IA (IFTS 12): asistente que orienta sobre trámites de obras sociales y prepagas ante la SSSalud. Proyecto académico, no es un canal oficial.",
+  "name": "Remix Orienta IA - Asistente Virtual SSSalud",
+  "description": "Asistente virtual inteligente de la Superintendencia de Servicios de Salud. Orientación ciudadana sobre trámites de obras sociales, prepagas, checklists de requisitos y canales oficiales TAD y presencial.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

@@ -18,7 +18,9 @@ const PORT = Number(process.env.PORT) || 3000;
 app.use(express.json({ limit: '12mb' }));
 
 /* ------------------------------------------------------------------ */
-/* Gemini                                                              */
+/* Gemini: solo se usa en "Herramientas IA" (revisión de documentación).*/
+/* El chat del asistente NO usa Gemini: funciona con reglas sobre la    */
+/* base de trámites (ver src/modelo/AsistenteIA.ts).                    */
 /* ------------------------------------------------------------------ */
 
 const MODELO_GEMINI = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
@@ -38,6 +40,42 @@ function conTimeout<T>(promesa: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
+/** Modelo alternativo si el principal está saturado (opcional, por Secrets). */
+const MODELO_RESPALDO = process.env.GEMINI_MODEL_RESPALDO || '';
+
+function esErrorTemporal(error: any): boolean {
+  const texto = String(error?.message || error || '');
+  return /503|429|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand|overloaded|timeout/i.test(texto);
+}
+
+/**
+ * Llama a Gemini con reintentos cuando el modelo está saturado (error 503 "high demand").
+ * Intenta: modelo principal -> espera y reintenta -> modelo de respaldo (si está configurado).
+ */
+async function generarConReintento(params: any, msPorIntento: number): Promise<any> {
+  if (!ai) throw new Error('IA no configurada');
+  const intentos: { modelo: string; espera: number }[] = [
+    { modelo: MODELO_GEMINI, espera: 0 },
+    { modelo: MODELO_GEMINI, espera: 1200 },
+  ];
+  if (MODELO_RESPALDO && MODELO_RESPALDO !== MODELO_GEMINI) {
+    intentos.push({ modelo: MODELO_RESPALDO, espera: 300 });
+  }
+
+  let ultimoError: any;
+  for (const intento of intentos) {
+    if (intento.espera) await new Promise((r) => setTimeout(r, intento.espera));
+    try {
+      return await conTimeout(ai.models.generateContent({ ...params, model: intento.modelo }), msPorIntento);
+    } catch (error: any) {
+      ultimoError = error;
+      if (!esErrorTemporal(error)) break; // error de configuración: no tiene sentido reintentar
+      console.warn(`Gemini (${intento.modelo}) no respondió, reintentando:`, error?.message || error);
+    }
+  }
+  throw ultimoError;
+}
+
 /** Enmascara datos personales antes de mandar texto a la IA. */
 function enmascararDatos(texto: string): string {
   return texto
@@ -47,131 +85,12 @@ function enmascararDatos(texto: string): string {
     .slice(0, 1500);
 }
 
-interface ItemCatalogo {
-  id: string;
-  nombre: string;
-  descripcion?: string;
-  ejemplos?: string[];
-}
-
-/** Catálogo por defecto: el tramites.json del proyecto (por si el cliente no lo envía). */
-function catalogoDelProyecto(): ItemCatalogo[] {
-  try {
-    const raw = fs.readFileSync(path.resolve(__dirname, 'src/data/db/tramites.json'), 'utf-8');
-    const json = JSON.parse(raw);
-    return (json.tramites || []).map((t: any) => ({
-      id: t.id,
-      nombre: t.nombre,
-      descripcion: t.descripcion,
-      ejemplos: t.ejemplos_usuario,
-    }));
-  } catch {
-    return [];
-  }
-}
-
-const CONDICIONES = [
-  'relacion_dependencia',
-  'monotributista',
-  'monotributo_social',
-  'servicio_domestico',
-  'jubilado_pensionado',
-  'seguro_desempleo',
-  'prepaga_adherente',
-  'prepaga_via_agente_seguro',
-];
-const BENEFICIARIOS = ['titular', 'conyuge_conviviente', 'hijo_menor_21', 'hijo_estudiante_21_25', 'persona_cud'];
-
 /* ------------------------------------------------------------------ */
 /* Salud del servicio                                                  */
 /* ------------------------------------------------------------------ */
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', aiAvailable: !!ai, modelo: MODELO_GEMINI });
-});
-
-/* ------------------------------------------------------------------ */
-/* AsistenteIA.interpretarConsulta(): Gemini solo clasifica            */
-/* ------------------------------------------------------------------ */
-
-app.post('/api/interpretar', async (req: Request, res: Response) => {
-  const { texto, etapa, tramiteActual, catalogo } = req.body || {};
-  if (!texto || typeof texto !== 'string') {
-    return res.status(400).json({ error: 'Texto requerido' });
-  }
-  if (!ai) {
-    return res.json({ interpretacion: null, motivo: 'IA no configurada' });
-  }
-
-  const lista: ItemCatalogo[] =
-    Array.isArray(catalogo) && catalogo.length > 0 ? catalogo.slice(0, 60) : catalogoDelProyecto();
-  const ids = lista.map((t) => String(t.id));
-
-  const catalogoTexto = lista
-    .map(
-      (t) =>
-        `- id: ${t.id} | ${t.nombre}${t.descripcion ? ` | ${t.descripcion}` : ''}${
-          t.ejemplos?.length ? ` | ejemplos: ${t.ejemplos.slice(0, 4).join(' / ')}` : ''
-        }`
-    )
-    .join('\n');
-
-  const instrucciones = `Sos el módulo de interpretación de "Orienta IA", un asistente académico que orienta sobre trámites de obras sociales y prepagas ante la Superintendencia de Servicios de Salud (SSSalud) de Argentina.
-Tu única tarea es CLASIFICAR el mensaje de la persona. No respondas al usuario, no redactes requisitos ni consejos.
-
-Catálogo de trámites disponibles:
-${catalogoTexto}
-
-Reglas:
-- tramite_id: el id del catálogo que corresponde al problema. Si no corresponde a ninguno o no está claro, usá "ninguno".
-- tipo_entidad: "obra_social", "prepaga" o "no_informa".
-- condicion: la situación laboral del titular si se menciona; si no, "no_informa".
-- beneficiario: para quién es el trámite si se menciona; si no, "no_informa".
-- fuera_de_alcance: true solo si el mensaje no tiene relación con salud, obras sociales o prepagas.
-- No inventes datos que la persona no dijo.
-${etapa && etapa !== 'init' ? `Contexto: el asistente le acaba de preguntar a la persona un dato (etapa "${etapa}") del trámite "${tramiteActual ?? 'sin definir'}". Interpretá su respuesta para ese dato.` : ''}`;
-
-  try {
-    const respuesta: any = await conTimeout(
-      ai.models.generateContent({
-        model: MODELO_GEMINI,
-        contents: [{ role: 'user', parts: [{ text: enmascararDatos(texto) }] }],
-        config: {
-          systemInstruction: instrucciones,
-          temperature: 0,
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              tramite_id: { type: Type.STRING, enum: [...ids, 'ninguno'] },
-              tipo_entidad: { type: Type.STRING, enum: ['obra_social', 'prepaga', 'no_informa'] },
-              condicion: { type: Type.STRING, enum: [...CONDICIONES, 'no_informa'] },
-              beneficiario: { type: Type.STRING, enum: [...BENEFICIARIOS, 'no_informa'] },
-              fuera_de_alcance: { type: Type.BOOLEAN },
-            },
-            required: ['tramite_id', 'tipo_entidad', 'condicion', 'beneficiario', 'fuera_de_alcance'],
-          },
-        },
-      }),
-      8000
-    );
-
-    const datos = JSON.parse(respuesta?.text || '{}');
-    const valido = (v: unknown, opciones: string[]) => (typeof v === 'string' && opciones.includes(v) ? v : null);
-
-    return res.json({
-      interpretacion: {
-        tramite_id: valido(datos.tramite_id, ids),
-        tipo_entidad: valido(datos.tipo_entidad, ['obra_social', 'prepaga']),
-        condicion: valido(datos.condicion, CONDICIONES),
-        beneficiario: valido(datos.beneficiario, BENEFICIARIOS),
-        fuera_de_alcance: datos.fuera_de_alcance === true,
-      },
-    });
-  } catch (error: any) {
-    console.warn('Interpretación con IA no disponible:', error?.message || error);
-    return res.json({ interpretacion: null, motivo: 'IA no disponible' });
-  }
+  res.json({ status: 'ok', aiAvailable: !!ai, modelo: MODELO_GEMINI, respaldo: MODELO_RESPALDO || null });
 });
 
 /* ------------------------------------------------------------------ */
@@ -222,9 +141,8 @@ ${documentText ? `Texto aportado por la persona: ${enmascararDatos(String(docume
 Indicá si se ve firma, sello con matrícula, diagnóstico y fecha. No transcribas nombres, DNI ni números de afiliado.`,
       });
 
-      const respuesta: any = await conTimeout(
-        ai.models.generateContent({
-          model: MODELO_GEMINI,
+      const respuesta: any = await generarConReintento(
+        {
           contents: [{ role: 'user', parts: partes }],
           config: {
             systemInstruction:
@@ -243,7 +161,7 @@ Indicá si se ve firma, sello con matrícula, diagnóstico y fecha. No transcrib
               required: ['tipoDocumento', 'estado', 'observacionesPositivas', 'elementosFaltantes', 'recomendacionCiudadana'],
             },
           },
-        }),
+        },
         15000
       );
       return res.json(JSON.parse(respuesta?.text || '{}'));

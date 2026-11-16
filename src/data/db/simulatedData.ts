@@ -4,6 +4,7 @@
  */
 
 import { EventoConsulta, ResultadoConsulta } from './types';
+import { cargarConsultasSimuladas } from './consultasSimuladas';
 
 export const K_MINIMO = 10;
 const STORAGE_KEY = 'orienta_ia_sesion_consultas';
@@ -35,26 +36,28 @@ export interface TableroMetricas {
  * Loads both the 2,000 baseline simulated events and any newly logged session events from localStorage.
  */
 export async function loadAllConsultas(): Promise<EventoConsulta[]> {
-  let simulatedEvents: EventoConsulta[] = [];
+  // Base: las 2.000 consultas simuladas incluidas en el código.
+  let simulatedEvents: EventoConsulta[] = cargarConsultasSimuladas();
 
+  // Si el proyecto tiene un CSV propio en public/assets/aistudio, se usa ese en su lugar.
   try {
     const res = await fetch('/assets/aistudio/consultas_simuladas_d3c394fb.csv');
     if (res.ok) {
       const csvText = await res.text();
-      simulatedEvents = parseConsultasCsv(csvText);
+      if (csvText.trimStart().startsWith('fecha,')) {
+        const delCsv = parseConsultasCsv(csvText);
+        if (delCsv.length > 0) simulatedEvents = delCsv;
+      }
     }
-  } catch (err) {
-    console.warn('No se pudo cargar consultas_simuladas.csv desde fetch, usando fallback local', err);
+  } catch {
+    // Sin CSV: se usan las consultas simuladas incluidas en el código.
   }
 
-  // Load session events from localStorage
+  // Consultas reales registradas en este navegador.
   const sessionEvents = getSessionConsultas();
   return [...simulatedEvents, ...sessionEvents];
 }
 
-/**
- * Parses the CSV content into EventoConsulta objects.
- */
 export function parseConsultasCsv(csv: string): EventoConsulta[] {
   const lines = csv.trim().split('\n');
   if (lines.length <= 1) return [];

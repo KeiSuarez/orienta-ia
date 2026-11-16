@@ -3,31 +3,15 @@ import { Download, RefreshCw, Database, ShieldCheck, AlertTriangle } from 'lucid
 import { EventoConsulta } from '../../data/db/types';
 import { getSessionConsultas } from '../../data/db/simulatedData';
 import { getTramiteById } from '../../data/db/tramitesData';
+import { Administrador, SesionVencidaError } from '../../modelo';
 
 interface Props {
-  token: string;
+  administrador: Administrador;
   onSesionVencida: () => void;
 }
 
-const COLUMNAS: (keyof EventoConsulta)[] = [
-  'fecha',
-  'tramite_detectado',
-  'resultado',
-  'condicion',
-  'tipo_entidad',
-  'entidad',
-  'provincia',
-  'rango_edad',
-  'mes'
-];
-
-function aCsv(eventos: EventoConsulta[]): string {
-  const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  return [COLUMNAS.join(','), ...eventos.map((e) => COLUMNAS.map((c) => esc(String(e[c] ?? ''))).join(','))].join('\n');
-}
-
-function descargarCsv(eventos: EventoConsulta[], nombre: string) {
-  const blob = new Blob(['﻿' + aCsv(eventos)], { type: 'text/csv;charset=utf-8' });
+function descargarArchivo(contenido: string, nombre: string) {
+  const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -40,7 +24,7 @@ function descargarCsv(eventos: EventoConsulta[], nombre: string) {
  * Consultas reales registradas por el asistente (anónimas: sin texto ni datos personales).
  * Se guardan en el servidor y el administrador puede descargarlas en CSV.
  */
-export const ConsultasRegistradas: React.FC<Props> = ({ token, onSesionVencida }) => {
+export const ConsultasRegistradas: React.FC<Props> = ({ administrador, onSesionVencida }) => {
   const [eventos, setEventos] = useState<EventoConsulta[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,15 +33,12 @@ export const ConsultasRegistradas: React.FC<Props> = ({ token, onSesionVencida }
     setCargando(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/consultas', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.status === 401) {
+      setEventos(await administrador.obtenerConsultas());
+    } catch (err) {
+      if (err instanceof SesionVencidaError) {
         onSesionVencida();
         return;
       }
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setEventos(Array.isArray(data.consultas) ? data.consultas : []);
-    } catch {
       setError('No se pudieron leer las consultas del servidor. Se muestran las registradas en este navegador.');
       setEventos(getSessionConsultas());
     } finally {
@@ -91,7 +72,7 @@ export const ConsultasRegistradas: React.FC<Props> = ({ token, onSesionVencida }
               <RefreshCw className={`w-4 h-4 ${cargando ? 'animate-spin' : ''}`} /> Actualizar
             </button>
             <button
-              onClick={() => descargarCsv(eventos, `consultas_orienta_ia_${hoy}.csv`)}
+              onClick={() => descargarArchivo(administrador.exportarConsultas(eventos), `consultas_orienta_ia_${hoy}.csv`)}
               disabled={eventos.length === 0}
               className={`min-h-[40px] px-3 rounded-[9px] text-xs font-semibold flex items-center justify-center gap-1.5 ${eventos.length ? 'bg-[#2B82C9] hover:bg-[#2170B0] text-white cursor-pointer' : 'bg-white/10 text-slate-400 cursor-not-allowed'}`}
             >
