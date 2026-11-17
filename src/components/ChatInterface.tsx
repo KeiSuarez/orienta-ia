@@ -17,6 +17,7 @@ import { logAnonymousConsultation } from '../data/db/simulatedData';
 import { ENLACES_OFICIALES, TRAMITES_DATA } from '../data/db/tramitesData';
 import { AsistenteIA, Ciudadano, Checklist, Consulta, RespuestaAsistente } from '../modelo';
 import { OrientaLogo } from './OrientaLogo';
+import { ocultarDatosPersonales } from '../utils/privacyGuard';
 
 interface ChatInterfaceProps {
   /** La persona anónima que usa el asistente (clase Ciudadano). */
@@ -186,7 +187,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setInputText('');
     setMessages((prev) => [
       ...prev,
-      { id: `user-${Date.now()}`, role: 'user', content: textoVisible ?? texto, timestamp: hora() },
+      { id: `user-${Date.now()}`, role: 'user', content: ocultarDatosPersonales(textoVisible ?? texto), timestamp: hora() },
     ]);
     setIsTyping(true);
 
