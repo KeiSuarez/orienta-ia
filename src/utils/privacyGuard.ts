@@ -18,7 +18,7 @@ const NUMERO_LARGO_REGEX = /\b\d{1,3}(?:\.\d{3}){2,3}\b|\b\d{7,11}\b/;
 const CLAVE_FISCAL_REGEX = /\b(mi\s+)?clave\s+(fiscal|arca|afip)\s+(es|:)/i;
 const NOMBRE_REGEX = /\b(me llamo|mi nombre es)\s+\p{L}+/iu;
 // Para enmascarar: el primer nombre y hasta dos palabras más que empiecen con mayúscula.
-const NOMBRE_COMPLETO_REGEX = /\b(me llamo|mi nombre es)\s+\p{L}+(?:\s+\p{Lu}\p{L}*){0,2}/giu;
+const NOMBRE_COMPLETO_REGEX = /\b([Mm]e llamo|[Mm]i nombre es)\s+\p{L}+(?:\s+\p{Lu}\p{L}*){0,2}/gu;
 const AFILIADO_REGEX = /\b(n(ro|°|º|umero)?\.?\s*(de\s+)?afiliad[oa])\s*:?\s*[\d/-]{4,}/i;
 
 /**
@@ -44,7 +44,7 @@ export function checkPersonalData(input: string): PrivacyCheckResult {
       hasPersonalData: true,
       detectedTypes: [...tipos],
       warningMessage:
-        'Para cuidar tu privacidad, recordá que no hace falta que compartas tu DNI, CUIL, nombre, teléfono ni datos médicos. En este asistente no guardamos ningún dato personal.'
+        'Para cuidar tu privacidad, ocultamos los datos personales que escribiste. No hace falta que compartas tu DNI, CUIL, nombre, teléfono ni datos médicos: este asistente no guarda ningún dato personal.'
     };
   }
 
@@ -54,10 +54,22 @@ export function checkPersonalData(input: string): PrivacyCheckResult {
 /** Enmascara los datos personales antes de procesar el texto. */
 export function sanitizeText(text: string): string {
   return text
+    .replace(/\b((mi\s+)?clave\s+(fiscal|arca|afip)\s+(es|:)\s*)\S+/gi, '$1[CLAVE_PROTEGIDA]')
     .replace(new RegExp(EMAIL_REGEX.source, 'g'), '[CORREO_PROTEGIDO]')
     .replace(new RegExp(CUIL_CUIT_REGEX.source, 'g'), '[CUIL_PROTEGIDO]')
     .replace(NOMBRE_COMPLETO_REGEX, (_m, frase) => `${frase} [NOMBRE_PROTEGIDO]`)
     .replace(new RegExp(AFILIADO_REGEX.source, 'gi'), '[AFILIADO_PROTEGIDO]')
     .replace(new RegExp(PHONE_REGEX.source, 'g'), (m) => (m.replace(/\D/g, '').length >= 8 ? ' [TELEFONO_PROTEGIDO]' : m))
-    .replace(/\b\d{1,3}(?:\.\d{3}){2,3}\b|\b\d{7,11}\b/g, '[NUMERO_PROTEGIDO]');
+    .replace(/\b\d{1,3}(?:\.\d{3}){2,3}\b|\b\d{7,11}(?:\/\d+)?\b/g, '[NUMERO_PROTEGIDO]');
+}
+
+/**
+ * Versión del texto para mostrar en pantalla: los datos personales se reemplazan
+ * por puntos, así no quedan visibles en la conversación.
+ */
+export function ocultarDatosPersonales(text: string): string {
+  if (!checkPersonalData(text).hasPersonalData) return text;
+  return sanitizeText(text)
+    .replace(/\s?\[[A-Z]+_PROTEGID[OA]\]/g, ' ••••••')
+    .trim();
 }
